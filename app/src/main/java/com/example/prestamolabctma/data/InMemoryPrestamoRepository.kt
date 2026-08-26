@@ -15,15 +15,15 @@ class InMemoryPrestamoRepository : PrestamoRepository {
     private val solicitudes = mutableListOf<SolicitudPrestamo>()
     private var siguienteSolicitudId = 1
 
-    override fun obtenerEquipos(): List<Equipo> = equipos.toList()
+    override suspend fun obtenerEquipos(): List<Equipo> = equipos.toList()
 
-    override fun obtenerEquipo(id: Int): Equipo? = equipos.find { it.id == id }
+    override suspend fun obtenerEquipo(id: Int): Equipo? = equipos.find { it.id == id }
 
-    override fun obtenerSolicitudes(): List<SolicitudPrestamo> = solicitudes.toList()
+    override suspend fun obtenerSolicitudes(): List<SolicitudPrestamo> = solicitudes.toList()
 
-    override fun obtenerSolicitud(id: Int): SolicitudPrestamo? = solicitudes.find { it.id == id }
+    override suspend fun obtenerSolicitud(id: Int): SolicitudPrestamo? = solicitudes.find { it.id == id }
 
-    override fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit> {
+    override suspend fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit> {
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
 
         if (equipoIndex == -1) {
@@ -42,7 +42,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    override fun cancelarSolicitud(id: Int): Result<Unit> {
+    override suspend fun cancelarSolicitud(id: Int): Result<Unit> {
         val solicitudIndex = solicitudes.indexOfFirst { it.id == id }
 
         if (solicitudIndex == -1) {

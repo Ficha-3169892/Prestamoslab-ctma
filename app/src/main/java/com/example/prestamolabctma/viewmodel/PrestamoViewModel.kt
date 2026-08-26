@@ -1,6 +1,7 @@
 package com.example.prestamolabctma.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.prestamolabctma.data.InMemoryPrestamoRepository
 import com.example.prestamolabctma.data.PrestamoRepository
 import com.example.prestamolabctma.model.EstadoSolicitud
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class PrestamoViewModel(
     private val repository: PrestamoRepository = InMemoryPrestamoRepository()
@@ -22,20 +24,29 @@ class PrestamoViewModel(
     }
 
     fun cargarDatos() {
-        val listaEquipos = repository.obtenerEquipos()
-        val listaSolicitudes = repository.obtenerSolicitudes()
-        _uiState.update {
-            it.copy(equipos = listaEquipos, solicitudes = listaSolicitudes)
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val listaEquipos = repository.obtenerEquipos()
+            val listaSolicitudes = repository.obtenerSolicitudes()
+            _uiState.update {
+                it.copy(
+                    equipos = listaEquipos,
+                    solicitudes = listaSolicitudes,
+                    estaCargando = false
+                )
+            }
         }
     }
 
     fun seleccionarEquipo(equipoId: Int) {
-        val equipo = repository.obtenerEquipo(equipoId)
-        _uiState.update {
-            it.copy(
-                equipoSeleccionado = equipo,
-                formulario = FormularioSolicitudState(equipoId = equipoId)
-            )
+        viewModelScope.launch {
+            val equipo = repository.obtenerEquipo(equipoId)
+            _uiState.update {
+                it.copy(
+                    equipoSeleccionado = equipo,
+                    formulario = FormularioSolicitudState(equipoId = equipoId)
+                )
+            }
         }
     }
 
@@ -105,30 +116,39 @@ class PrestamoViewModel(
             estado = EstadoSolicitud.SOLICITADA
         )
 
-        val resultado = repository.crearSolicitud(nuevaSolicitud)
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.crearSolicitud(nuevaSolicitud)
+            _uiState.update { it.copy(estaCargando = false) }
 
-        resultado.onSuccess {
-            cargarDatos()
-            _uiState.update { estado ->
-                estado.copy(
-                    mensajeExito = "¡Solicitud registrada correctamente!",
-                    formulario = FormularioSolicitudState()
-                )
-            }
-        }.onFailure { error ->
-            _uiState.update { estado ->
-                estado.copy(mensajeError = error.message ?: "Error al guardar la solicitud")
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { estado ->
+                    estado.copy(
+                        mensajeExito = "¡Solicitud registrada correctamente!",
+                        formulario = FormularioSolicitudState()
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update { estado ->
+                    estado.copy(mensajeError = error.message ?: "Error al guardar la solicitud")
+                }
             }
         }
     }
 
     fun cancelarSolicitud(solicitudId: Int) {
-        val resultado = repository.cancelarSolicitud(solicitudId)
-        resultado.onSuccess {
-            cargarDatos()
-            _uiState.update { it.copy(mensajeExito = "Solicitud cancelada con éxito") }
-        }.onFailure { error ->
-            _uiState.update { it.copy(mensajeError = error.message ?: "Error al cancelar") }
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.cancelarSolicitud(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Solicitud cancelada con éxito") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al cancelar") }
+            }
         }
     }
 
