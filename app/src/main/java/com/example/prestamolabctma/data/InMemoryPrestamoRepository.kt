@@ -5,11 +5,46 @@ import com.example.prestamolabctma.model.*
 class InMemoryPrestamoRepository : PrestamoRepository {
 
     private val equipos = mutableListOf(
-        Equipo(1, "Multímetro Digital Fluke", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE),
-        Equipo(2, "Kit de Electrónica Arduino", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
-        Equipo(3, "Osciloscopio Portátil", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE),
-        Equipo(4, "Cámara Fotográfica Sony", CategoriaEquipo.PERIFERICOS, EstadoEquipo.PRESTADO),
-        Equipo(5, "Tableta Gráfica Wacom", CategoriaEquipo.COMPUTO, EstadoEquipo.DISPONIBLE)
+        Equipo(
+            id = 1,
+            nombre = "Multímetro Digital Fluke",
+            categoria = CategoriaEquipo.MEDICION,
+            estado = EstadoEquipo.DISPONIBLE,
+            descripcion = "Multímetro industrial de alta precisión para mediciones eléctricas avanzadas.",
+            especificaciones = listOf("Rango 1000V", "True RMS", "Pantalla retroiluminada", "Categoría IV 600V")
+        ),
+        Equipo(
+            id = 2,
+            nombre = "Kit de Electrónica Arduino",
+            categoria = CategoriaEquipo.ELECTRONICA,
+            estado = EstadoEquipo.DISPONIBLE,
+            descripcion = "Kit completo para prototipado con placa Uno R3 y variedad de sensores.",
+            especificaciones = listOf("Atmega328P", "Cable USB incluido", "Set de 30 sensores", "Protoboard")
+        ),
+        Equipo(
+            id = 3,
+            nombre = "Osciloscopio Portátil",
+            categoria = CategoriaEquipo.MEDICION,
+            estado = EstadoEquipo.DISPONIBLE,
+            descripcion = "Herramienta compacta para visualización de señales en campo.",
+            especificaciones = listOf("2 Canales", "100 MHz", "Muestreo 1GSa/s", "Batería recargable")
+        ),
+        Equipo(
+            id = 4,
+            nombre = "Cámara Fotográfica Sony",
+            categoria = CategoriaEquipo.PERIFERICOS,
+            estado = EstadoEquipo.PRESTADO,
+            descripcion = "Cámara mirrorless para registro de evidencias y proyectos multimedia.",
+            especificaciones = listOf("Sensor APS-C", "Grabación 4K", "Lente 16-50mm", "Conectividad Wi-Fi")
+        ),
+        Equipo(
+            id = 5,
+            nombre = "Tableta Gráfica Wacom",
+            categoria = CategoriaEquipo.COMPUTO,
+            estado = EstadoEquipo.DISPONIBLE,
+            descripcion = "Superficie táctil de alta sensibilidad para diseño gráfico y retoque digital.",
+            especificaciones = listOf("4096 niveles de presión", "Lápiz sin batería", "4 teclas ExpressKey", "Tamaño Small")
+        )
     )
 
     private val solicitudes = mutableListOf<SolicitudPrestamo>()

@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.prestamolabctma.ui.CatalogoScreen
+import com.example.prestamolabctma.ui.EquipoDetailScreen
 import com.example.prestamolabctma.ui.MisSolicitudesScreen
 import com.example.prestamolabctma.ui.SolicitudFormScreen
 import com.example.prestamolabctma.viewmodel.PrestamoViewModel
@@ -22,9 +23,16 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                 uiState = uiState,
                 onEquipoSeleccionado = { equipoId ->
                     viewModel.seleccionarEquipo(equipoId)
-                    navController.navigate("formulario")
+                    navController.navigate("detalle")
                 },
                 onVerSolicitudes = { navController.navigate("solicitudes") }
+            )
+        }
+        composable("detalle") {
+            EquipoDetailScreen(
+                uiState = uiState,
+                onSolicitar = { navController.navigate("formulario") },
+                onVolver = { navController.popBackStack() }
             )
         }
         composable("formulario") {
