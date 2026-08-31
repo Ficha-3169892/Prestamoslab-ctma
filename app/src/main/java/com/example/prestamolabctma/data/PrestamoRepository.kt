@@ -10,4 +10,9 @@ interface PrestamoRepository {
     suspend fun obtenerSolicitud(id: Int): SolicitudPrestamo?
     suspend fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit>
     suspend fun cancelarSolicitud(id: Int): Result<Unit>
+
+    // CRUD para Equipos
+    suspend fun agregarEquipo(equipo: Equipo): Result<Unit>
+    suspend fun actualizarEquipo(equipo: Equipo): Result<Unit>
+    suspend fun eliminarEquipo(id: Int): Result<Unit>
 }

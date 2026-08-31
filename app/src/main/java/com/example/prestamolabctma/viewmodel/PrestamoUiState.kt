@@ -15,6 +15,15 @@ data class FormularioSolicitudState(
     val esFormularioValido: Boolean = false
 )
 
+data class FormularioEquipoState(
+    val id: Int = 0,
+    val nombre: String = "",
+    val descripcion: String = "",
+    val categoria: com.example.prestamolabctma.model.CategoriaEquipo = com.example.prestamolabctma.model.CategoriaEquipo.ELECTRONICA,
+    val errorNombre: String? = null,
+    val esValido: Boolean = false
+)
+
 // Estado global de la interfaz gráfica
 data class PrestamoUiState(
     val equipos: List<Equipo> = emptyList(),
@@ -23,6 +32,7 @@ data class PrestamoUiState(
     val solicitudes: List<SolicitudPrestamo> = emptyList(),
     val equipoSeleccionado: Equipo? = null,
     val formulario: FormularioSolicitudState = FormularioSolicitudState(),
+    val formularioEquipo: FormularioEquipoState = FormularioEquipoState(),
     val mensajeExito: String? = null,
     val mensajeError: String? = null,
     val estaCargando: Boolean = false

@@ -170,4 +170,81 @@ class PrestamoViewModel(
     fun limpiarMensajes() {
         _uiState.update { it.copy(mensajeExito = null, mensajeError = null) }
     }
+
+    // --- CRUD EQUIPOS ---
+
+    fun onNombreEquipoChanged(nuevoNombre: String) {
+        _uiState.update { estado ->
+            val error = if (nuevoNombre.isBlank()) "El nombre es obligatorio" else null
+            val form = estado.formularioEquipo.copy(nombre = nuevoNombre, errorNombre = error)
+            estado.copy(formularioEquipo = form.copy(esValido = nuevoNombre.isNotBlank()))
+        }
+    }
+
+    fun onDescripcionEquipoChanged(nuevaDesc: String) {
+        _uiState.update { estado ->
+            estado.copy(formularioEquipo = estado.formularioEquipo.copy(descripcion = nuevaDesc))
+        }
+    }
+
+    fun onCategoriaEquipoChanged(nuevaCat: com.example.prestamolabctma.model.CategoriaEquipo) {
+        _uiState.update { estado ->
+            estado.copy(formularioEquipo = estado.formularioEquipo.copy(categoria = nuevaCat))
+        }
+    }
+
+    fun prepararNuevoEquipo() {
+        _uiState.update { it.copy(formularioEquipo = FormularioEquipoState()) }
+    }
+
+    fun prepararEditarEquipo(equipo: com.example.prestamolabctma.model.Equipo) {
+        _uiState.update { 
+            it.copy(
+                formularioEquipo = FormularioEquipoState(
+                    id = equipo.id,
+                    nombre = equipo.nombre,
+                    descripcion = equipo.descripcion,
+                    categoria = equipo.categoria,
+                    esValido = true
+                )
+            )
+        }
+    }
+
+    fun guardarEquipo() {
+        val form = _uiState.value.formularioEquipo
+        if (!form.esValido) return
+
+        val equipo = com.example.prestamolabctma.model.Equipo(
+            id = form.id,
+            nombre = form.nombre,
+            descripcion = form.descripcion,
+            categoria = form.categoria,
+            estado = if (form.id == 0) com.example.prestamolabctma.model.EstadoEquipo.DISPONIBLE 
+                     else _uiState.value.equipos.find { it.id == form.id }?.estado ?: com.example.prestamolabctma.model.EstadoEquipo.DISPONIBLE
+        )
+
+        viewModelScope.launch {
+            val resultado = if (equipo.id == 0) repository.agregarEquipo(equipo) 
+                            else repository.actualizarEquipo(equipo)
+            
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo guardado correctamente") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message) }
+            }
+        }
+    }
+
+    fun eliminarEquipo(id: Int) {
+        viewModelScope.launch {
+            repository.eliminarEquipo(id).onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo eliminado") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message) }
+            }
+        }
+    }
 }

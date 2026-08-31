@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.prestamolabctma.ui.CatalogoScreen
+import com.example.prestamolabctma.ui.EquipoFormScreen
 import com.example.prestamolabctma.ui.MisSolicitudesScreen
 import com.example.prestamolabctma.ui.SolicitudFormScreen
 import com.example.prestamolabctma.viewmodel.PrestamoViewModel
@@ -97,7 +98,17 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                         viewModel.seleccionarEquipo(equipoId)
                         navController.navigate("formulario")
                     },
-                    onVerSolicitudes = { navController.navigate("solicitudes") }
+                    onAgregarEquipo = {
+                        viewModel.prepararNuevoEquipo()
+                        navController.navigate("equipoForm")
+                    },
+                    onEditarEquipo = { equipo ->
+                        viewModel.prepararEditarEquipo(equipo)
+                        navController.navigate("equipoForm")
+                    },
+                    onEliminarEquipo = { id ->
+                        viewModel.eliminarEquipo(id)
+                    }
                 )
             }
             composable("formulario") {
@@ -111,6 +122,13 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                 MisSolicitudesScreen(
                     uiState = uiState,
                     onCancelarSolicitud = { viewModel.cancelarSolicitud(it) },
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+            composable("equipoForm") {
+                EquipoFormScreen(
+                    viewModel = viewModel,
+                    uiState = uiState,
                     onVolver = { navController.popBackStack() }
                 )
             }

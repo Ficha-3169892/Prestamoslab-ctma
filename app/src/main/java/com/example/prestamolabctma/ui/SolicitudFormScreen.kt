@@ -19,8 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.prestamolabctma.model.EstadoEquipo
-import com.example.prestamolabctma.ui.theme.AccentGreen
-import com.example.prestamolabctma.ui.theme.PrimaryBlue
+import com.example.prestamolabctma.ui.theme.*
 import com.example.prestamolabctma.viewmodel.PrestamoViewModel
 import com.example.prestamolabctma.viewmodel.PrestamoUiState
 
@@ -35,11 +34,11 @@ fun SolicitudFormScreen(
     val form = uiState.formulario
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = BackgroundSlate,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                title = { Text("Nueva Solicitud", fontWeight = FontWeight.Bold) },
+                title = { Text("Nueva Solicitud", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -57,9 +56,9 @@ fun SolicitudFormScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             if (equipo != null) {
-                // Info Card del Equipo
+                // Info Card del Equipo (Más estilizada)
                 Card(
-                    shape = MaterialTheme.shapes.large,
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
@@ -69,16 +68,22 @@ fun SolicitudFormScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                .size(60.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(PrimaryBlueLight),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryBlue)
+                            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryBlue, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text(equipo.nombre, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                equipo.nombre, 
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextDark
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             BadgeEstadoModern(estado = equipo.estado)
                         }
                     }
