@@ -12,12 +12,33 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         Equipo(5, "Tableta Gráfica Wacom", CategoriaEquipo.COMPUTO, EstadoEquipo.DISPONIBLE)
     )
 
+    private var siguienteEquipoId = 6
     private val solicitudes = mutableListOf<SolicitudPrestamo>()
     private var siguienteSolicitudId = 1
 
     override suspend fun obtenerEquipos(): List<Equipo> = equipos.toList()
 
     override suspend fun obtenerEquipo(id: Int): Equipo? = equipos.find { it.id == id }
+
+    override suspend fun agregarEquipo(equipo: Equipo): Result<Unit> {
+        val nuevoEquipo = equipo.copy(id = siguienteEquipoId++)
+        equipos.add(nuevoEquipo)
+        return Result.success(Unit)
+    }
+
+    override suspend fun eliminarEquipo(id: Int): Result<Unit> {
+        val eliminado = equipos.removeIf { it.id == id }
+        return if (eliminado) Result.success(Unit) else Result.failure(Exception("Equipo no encontrado"))
+    }
+
+    override suspend fun actualizarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> {
+        val index = equipos.indexOfFirst { it.id == id }
+        if (index != -1) {
+            equipos[index] = equipos[index].copy(estado = nuevoEstado)
+            return Result.success(Unit)
+        }
+        return Result.failure(Exception("Equipo no encontrado"))
+    }
 
     override suspend fun obtenerSolicitudes(): List<SolicitudPrestamo> = solicitudes.toList()
 
@@ -56,6 +77,62 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.CANCELADA)
 
+        val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
+        if (equipoIndex != -1) {
+            equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)
+        }
+
+        return Result.success(Unit)
+    }
+
+    override suspend fun aprobarSolicitud(id: Int): Result<Unit> {
+        val solicitudIndex = solicitudes.indexOfFirst { it.id == id }
+        if (solicitudIndex == -1) return Result.failure(Exception("La solicitud no existe"))
+
+        val solicitud = solicitudes[solicitudIndex]
+        if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
+            return Result.failure(Exception("Solo se pueden aprobar solicitudes en estado SOLICITADA"))
+        }
+
+        solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.APROBADA)
+        
+        // Al aprobar, el equipo pasa de RESERVADO a PRESTADO
+        val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
+        if (equipoIndex != -1) {
+            equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.PRESTADO)
+        }
+
+        return Result.success(Unit)
+    }
+
+    override suspend fun rechazarSolicitud(id: Int): Result<Unit> {
+        val solicitudIndex = solicitudes.indexOfFirst { it.id == id }
+        if (solicitudIndex == -1) return Result.failure(Exception("La solicitud no existe"))
+
+        val solicitud = solicitudes[solicitudIndex]
+        if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
+            return Result.failure(Exception("Solo se pueden rechazar solicitudes en estado SOLICITADA"))
+        }
+
+        solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.RECHAZADA)
+
+        // Al rechazar, el equipo vuelve a estar DISPONIBLE
+        val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
+        if (equipoIndex != -1) {
+            equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)
+        }
+
+        return Result.success(Unit)
+    }
+
+    override suspend fun finalizarPrestamo(solicitudId: Int): Result<Unit> {
+        val solicitudIndex = solicitudes.indexOfFirst { it.id == solicitudId }
+        if (solicitudIndex == -1) return Result.failure(Exception("La solicitud no existe"))
+
+        val solicitud = solicitudes[solicitudIndex]
+        solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.DEVUELTA)
+
+        // Al devolver, el equipo vuelve a estar DISPONIBLE
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)

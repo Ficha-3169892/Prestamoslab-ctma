@@ -4,8 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.prestamolabctma.data.InMemoryPrestamoRepository
 import com.example.prestamolabctma.data.PrestamoRepository
-import com.example.prestamolabctma.model.EstadoSolicitud
-import com.example.prestamolabctma.model.SolicitudPrestamo
+import com.example.prestamolabctma.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -152,7 +151,111 @@ class PrestamoViewModel(
         }
     }
 
+    fun aprobarSolicitud(solicitudId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.aprobarSolicitud(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Solicitud aprobada") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al aprobar") }
+            }
+        }
+    }
+
+    fun rechazarSolicitud(solicitudId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.rechazarSolicitud(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Solicitud rechazada") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al rechazar") }
+            }
+        }
+    }
+
+    fun finalizarPrestamo(solicitudId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.finalizarPrestamo(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo devuelto correctamente") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al devolver") }
+            }
+        }
+    }
+
     fun limpiarMensajes() {
         _uiState.update { it.copy(mensajeExito = null, mensajeError = null) }
+    }
+
+    // --- Nuevas funcionalidades para Equipos ---
+
+    fun toggleEstadoEquipo(equipoId: Int) {
+        val equipo = _uiState.value.equipos.find { it.id == equipoId } ?: return
+        val nuevoEstado = if (equipo.estado == EstadoEquipo.DISPONIBLE) {
+            EstadoEquipo.PRESTADO
+        } else {
+            EstadoEquipo.DISPONIBLE
+        }
+
+        viewModelScope.launch {
+            repository.actualizarEstadoEquipo(equipoId, nuevoEstado).onSuccess {
+                cargarDatos()
+            }
+        }
+    }
+
+    fun mostrarDialogoNuevoEquipo(mostrar: Boolean) {
+        _uiState.update { it.copy(formularioEquipo = it.formularioEquipo.copy(mostrarDialogo = mostrar)) }
+    }
+
+    fun onNombreEquipoChanged(nombre: String) {
+        _uiState.update { it.copy(formularioEquipo = it.formularioEquipo.copy(nombre = nombre)) }
+    }
+
+    fun onCategoriaEquipoChanged(categoria: CategoriaEquipo) {
+        _uiState.update { it.copy(formularioEquipo = it.formularioEquipo.copy(categoria = categoria)) }
+    }
+
+    fun agregarEquipo() {
+        val nombre = _uiState.value.formularioEquipo.nombre
+        val categoria = _uiState.value.formularioEquipo.categoria
+
+        if (nombre.isBlank()) return
+
+        val nuevoEquipo = Equipo(
+            id = 0,
+            nombre = nombre,
+            categoria = categoria,
+            estado = EstadoEquipo.DISPONIBLE
+        )
+
+        viewModelScope.launch {
+            repository.agregarEquipo(nuevoEquipo).onSuccess {
+                cargarDatos()
+                mostrarDialogoNuevoEquipo(false)
+                _uiState.update { it.copy(formularioEquipo = FormularioEquipoState()) }
+            }
+        }
+    }
+
+    fun eliminarEquipo(equipoId: Int) {
+        viewModelScope.launch {
+            repository.eliminarEquipo(equipoId).onSuccess {
+                cargarDatos()
+            }
+        }
     }
 }
