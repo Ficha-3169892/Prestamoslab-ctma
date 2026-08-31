@@ -10,7 +10,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,9 +32,14 @@ import com.example.prestamolabctma.viewmodel.PrestamoUiState
 @Composable
 fun CatalogoScreen(
     uiState: PrestamoUiState,
+    onBusquedaChanged: (String) -> Unit,
     onEquipoSeleccionado: (Int) -> Unit,
     onVerSolicitudes: () -> Unit
 ) {
+    var equipoMostrarDetalle by androidx.compose.runtime.remember { 
+        androidx.compose.runtime.mutableStateOf<Equipo?>(null) 
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -47,21 +54,6 @@ fun CatalogoScreen(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-1).sp
                     )
-                },
-                actions = {
-                    IconButton(
-                        onClick = onVerSolicitudes,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Historial",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
             )
         }
@@ -71,6 +63,12 @@ fun CatalogoScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Buscador Moderno
+            SearchBarModern(
+                query = uiState.queryBusqueda,
+                onQueryChange = onBusquedaChanged
+            )
+
             // Header Resumen (Dashboard Style)
             ResumenDashboard(uiState.equipos.count { it.estado == EstadoEquipo.DISPONIBLE })
 
@@ -80,19 +78,104 @@ fun CatalogoScreen(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                items(uiState.equipos) { equipo ->
-                    EquipoModernItem(equipo = equipo, onClick = { onEquipoSeleccionado(equipo.id) })
+            if (uiState.equiposFiltrados.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No se encontraron equipos", color = TextGray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    items(uiState.equiposFiltrados) { equipo ->
+                        EquipoModernItem(equipo = equipo, onClick = { equipoMostrarDetalle = equipo })
+                    }
                 }
             }
         }
+
+        // Dialogo de Detalle
+        equipoMostrarDetalle?.let { equipo ->
+            DetalleEquipoDialog(
+                equipo = equipo,
+                onDismiss = { equipoMostrarDetalle = null },
+                onConfirmar = {
+                    equipoMostrarDetalle = null
+                    onEquipoSeleccionado(equipo.id)
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun DetalleEquipoDialog(
+    equipo: Equipo,
+    onDismiss: () -> Unit,
+    onConfirmar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = onConfirmar,
+                enabled = equipo.estado == EstadoEquipo.DISPONIBLE,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (equipo.estado == EstadoEquipo.DISPONIBLE) "Solicitar Préstamo" else "No Disponible")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar")
+            }
+        },
+        title = { Text(equipo.nombre, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                BadgeEstadoModern(estado = equipo.estado)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = equipo.descripcion.ifBlank { "Sin descripción disponible." },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextDark
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Categoría: ${equipo.categoria.name}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextGray
+                )
+            }
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = Color.White
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchBarModern(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        placeholder = { Text("Buscar equipo o categoría...") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedBorderColor = PrimaryBlue,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+        ),
+        singleLine = true
+    )
 }
 
 @Composable

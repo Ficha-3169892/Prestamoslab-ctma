@@ -31,10 +31,25 @@ class PrestamoViewModel(
             _uiState.update {
                 it.copy(
                     equipos = listaEquipos,
+                    equiposFiltrados = listaEquipos,
                     solicitudes = listaSolicitudes,
                     estaCargando = false
                 )
             }
+        }
+    }
+
+    fun onBusquedaChanged(query: String) {
+        _uiState.update { estado ->
+            val filtrados = if (query.isEmpty()) {
+                estado.equipos
+            } else {
+                estado.equipos.filter { 
+                    it.nombre.contains(query, ignoreCase = true) || 
+                    it.categoria.name.contains(query, ignoreCase = true)
+                }
+            }
+            estado.copy(queryBusqueda = query, equiposFiltrados = filtrados)
         }
     }
 

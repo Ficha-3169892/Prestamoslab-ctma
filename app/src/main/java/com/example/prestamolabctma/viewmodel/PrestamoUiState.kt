@@ -18,6 +18,8 @@ data class FormularioSolicitudState(
 // Estado global de la interfaz gráfica
 data class PrestamoUiState(
     val equipos: List<Equipo> = emptyList(),
+    val queryBusqueda: String = "",
+    val equiposFiltrados: List<Equipo> = emptyList(),
     val solicitudes: List<SolicitudPrestamo> = emptyList(),
     val equipoSeleccionado: Equipo? = null,
     val formulario: FormularioSolicitudState = FormularioSolicitudState(),

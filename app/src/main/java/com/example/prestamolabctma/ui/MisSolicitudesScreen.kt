@@ -11,7 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +29,10 @@ fun MisSolicitudesScreen(
     onCancelarSolicitud: (Int) -> Unit,
     onVolver: () -> Unit
 ) {
+    var solicitudACancelar by androidx.compose.runtime.remember { 
+        androidx.compose.runtime.mutableStateOf<Int?>(null) 
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -55,9 +59,36 @@ fun MisSolicitudesScreen(
                 contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
             ) {
                 items(uiState.solicitudes) { solicitud ->
-                    SolicitudModernItem(solicitud, onCancelarSolicitud)
+                    SolicitudModernItem(solicitud, onCancelarClick = { solicitudACancelar = it })
                 }
             }
+        }
+
+        // Dialogo de Confirmación
+        solicitudACancelar?.let { id ->
+            AlertDialog(
+                onDismissRequest = { solicitudACancelar = null },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onCancelarSolicitud(id)
+                            solicitudACancelar = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
+                    ) {
+                        Text("Confirmar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { solicitudACancelar = null }) {
+                        Text("Cancelar")
+                    }
+                },
+                title = { Text("¿Cancelar solicitud?") },
+                text = { Text("Esta acción no se puede deshacer y el equipo volverá a estar disponible.") },
+                shape = RoundedCornerShape(20.dp),
+                containerColor = Color.White
+            )
         }
     }
 }
@@ -65,7 +96,7 @@ fun MisSolicitudesScreen(
 @Composable
 fun SolicitudModernItem(
     solicitud: com.example.prestamolabctma.model.SolicitudPrestamo,
-    onCancelarSolicitud: (Int) -> Unit
+    onCancelarClick: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -95,7 +126,7 @@ fun SolicitudModernItem(
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 16.dp),
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
 
             DetailRow("Propósito", solicitud.proposito)
@@ -104,7 +135,7 @@ fun SolicitudModernItem(
             if (solicitud.estado == EstadoSolicitud.SOLICITADA) {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedButton(
-                    onClick = { onCancelarSolicitud(solicitud.id) },
+                    onClick = { onCancelarClick(solicitud.id) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),

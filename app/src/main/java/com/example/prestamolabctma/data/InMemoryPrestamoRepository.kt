@@ -5,11 +5,41 @@ import com.example.prestamolabctma.model.*
 class InMemoryPrestamoRepository : PrestamoRepository {
 
     private val equipos = mutableListOf(
-        Equipo(1, "Multímetro Digital Fluke", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE),
-        Equipo(2, "Kit de Electrónica Arduino", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
-        Equipo(3, "Osciloscopio Portátil", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE),
-        Equipo(4, "Cámara Fotográfica Sony", CategoriaEquipo.PERIFERICOS, EstadoEquipo.PRESTADO),
-        Equipo(5, "Tableta Gráfica Wacom", CategoriaEquipo.COMPUTO, EstadoEquipo.DISPONIBLE)
+        Equipo(
+            id = 1,
+            nombre = "Multímetro Digital Fluke",
+            descripcion = "Multímetro de alta precisión para medir voltaje, corriente y resistencia. Ideal para prácticas de circuitos.",
+            categoria = CategoriaEquipo.MEDICION,
+            estado = EstadoEquipo.DISPONIBLE
+        ),
+        Equipo(
+            id = 2,
+            nombre = "Kit de Electrónica Arduino",
+            descripcion = "Contiene placa Arduino Uno, sensores, cables, LEDs y componentes básicos para prototipado.",
+            categoria = CategoriaEquipo.ELECTRONICA,
+            estado = EstadoEquipo.DISPONIBLE
+        ),
+        Equipo(
+            id = 3,
+            nombre = "Osciloscopio Portátil",
+            descripcion = "Equipo para visualización de señales eléctricas en tiempo real. Frecuencia máxima 20MHz.",
+            categoria = CategoriaEquipo.MEDICION,
+            estado = EstadoEquipo.DISPONIBLE
+        ),
+        Equipo(
+            id = 4,
+            nombre = "Cámara Fotográfica Sony",
+            descripcion = "Cámara Mirrorless 24MP con lente 18-55mm. Para registro de proyectos o eventos.",
+            categoria = CategoriaEquipo.PERIFERICOS,
+            estado = EstadoEquipo.PRESTADO
+        ),
+        Equipo(
+            id = 5,
+            nombre = "Tableta Gráfica Wacom",
+            descripcion = "Tableta digitalizadora para diseño gráfico y dibujo artístico. Incluye lápiz sensible a la presión.",
+            categoria = CategoriaEquipo.COMPUTO,
+            estado = EstadoEquipo.DISPONIBLE
+        )
     )
 
     private val solicitudes = mutableListOf<SolicitudPrestamo>()
