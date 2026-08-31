@@ -71,7 +71,7 @@ fun CatalogoScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Header Resumen (Dashboard Style)
+            // Header Resumen
             ResumenDashboard(uiState.equipos.count { it.estado == EstadoEquipo.DISPONIBLE })
 
             Text(
@@ -83,12 +83,17 @@ fun CatalogoScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 items(uiState.equipos) { equipo ->
-                    EquipoModernItem(equipo = equipo, onClick = { onEquipoSeleccionado(equipo.id) })
+                    TarjetaEquipoItem(
+                        nombre = equipo.nombre,
+                        categoria = equipo.categoria.name,
+                        disponible = equipo.estado == EstadoEquipo.DISPONIBLE,
+                        onClick = { onEquipoSeleccionado(equipo.id) }
+                    )
                 }
             }
         }
@@ -109,7 +114,7 @@ fun ResumenDashboard(disponibles: Int) {
                 .fillMaxWidth()
                 .background(
                     brush = Brush.horizontalGradient(
-                        listOf(PrimaryBlue, Color(0xFF3B82F6))
+                        listOf(NeonCyan, NeonPurple)
                     )
                 )
                 .padding(24.dp)
@@ -150,65 +155,91 @@ fun ResumenDashboard(disponibles: Int) {
 }
 
 @Composable
-fun EquipoModernItem(equipo: Equipo, onClick: () -> Unit) {
+fun TarjetaEquipoItem(nombre: String, categoria: String, disponible: Boolean, onClick: () -> Unit) {
     Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Inventory2,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(
+                            color = NeonCyan.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Inventory2,
+                        contentDescription = null,
+                        tint = NeonCyan,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(
+                        text = nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = categoria.uppercase(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            // Badge de Estado
+            val bgBadge = if (disponible) GreenDisponibleBg else RedPrestadoBg
+            val textBadge = if (disponible) GreenDisponible else RedPrestado
+            val labelBadge = if (disponible) "DISPONIBLE" else "PRESTADO"
 
-            Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = bgBadge,
+                shape = RoundedCornerShape(50)
+            ) {
                 Text(
-                    text = equipo.nombre,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = equipo.categoria.name,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = labelBadge,
+                    color = textBadge,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
-
-            BadgeEstadoModern(estado = equipo.estado)
         }
     }
 }
 
 @Composable
 fun BadgeEstadoModern(estado: EstadoEquipo) {
-    val (color, label) = when (estado) {
-        EstadoEquipo.DISPONIBLE -> StatusGreen to "Disponible"
-        EstadoEquipo.RESERVADO -> StatusOrange to "Reservado"
-        EstadoEquipo.PRESTADO -> StatusRed to "Prestado"
+    val (color, colorBg, label) = when (estado) {
+        EstadoEquipo.DISPONIBLE -> Triple(GreenDisponible, GreenDisponibleBg, "Disponible")
+        EstadoEquipo.RESERVADO -> Triple(OrangeReservado, OrangeReservadoBg, "Reservado")
+        EstadoEquipo.PRESTADO -> Triple(RedPrestado, RedPrestadoBg, "Prestado")
     }
 
     Surface(
-        color = color.copy(alpha = 0.1f),
+        color = colorBg,
         shape = CircleShape
     ) {
         Text(

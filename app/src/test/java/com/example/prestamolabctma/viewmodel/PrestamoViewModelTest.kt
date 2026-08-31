@@ -46,6 +46,18 @@ class PrestamoViewModelTest {
     }
 
     @Test
+    fun `seleccionarEquipo carga los datos del equipo en el estado`() = runTest {
+        val equipo = Equipo(1, "Detalle", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE, "Desc", listOf("E1"))
+        coEvery { repository.obtenerEquipo(1) } returns equipo
+
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+
+        assertEquals(equipo, viewModel.uiState.value.equipoSeleccionado)
+        assertEquals(1, viewModel.uiState.value.formulario.equipoId)
+    }
+
+    @Test
     fun `validarFormularioCompleto retorna true cuando todos los campos son validos`() = runTest {
         viewModel.onAmbienteChanged("Laboratorio A")
         viewModel.onPropositoChanged("Práctica de electrónica básica")
