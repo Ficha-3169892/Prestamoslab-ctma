@@ -31,6 +31,7 @@ data class PrestamoUiState(
     val equipoSeleccionado: Equipo? = null,
     val formulario: FormularioSolicitudState = FormularioSolicitudState(),
     val formularioEquipo: FormularioEquipoState = FormularioEquipoState(),
+    val queryBusqueda: String = "",
     val mensajeExito: String? = null,
     val mensajeError: String? = null,
     val estaCargando: Boolean = false

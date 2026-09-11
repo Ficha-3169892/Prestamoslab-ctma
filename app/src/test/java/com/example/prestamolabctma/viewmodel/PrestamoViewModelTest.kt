@@ -115,7 +115,7 @@ class PrestamoViewModelTest {
 
     /**
      * HU: Préstamos
-     * CP-03 - Solicitar equipo reservado
+     * CP-03 - guardarSolicitud error cuando equipo esta reservado
      */
     @Test
     fun `CP-03 - guardarSolicitud error cuando equipo esta reservado`() = runTest {
@@ -169,7 +169,7 @@ class PrestamoViewModelTest {
 
     /**
      * HU: Préstamos
-     * CP-06 - Estado de error en ViewModel
+     * CP-06 - ViewModel actualiza estado de error correctamente al fallar solicitud
      */
     @Test
     fun `CP-06 - ViewModel actualiza estado de error correctamente al fallar solicitud`() = runTest {
@@ -475,5 +475,31 @@ class PrestamoViewModelTest {
         viewModel.onDuracionChanged("4")
         
         assertTrue(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    // --- Tests para HU-8: Búsqueda de equipos ---
+
+    @Test
+    fun `CP - 07 - Busqueda vacia`() = runTest {
+        viewModel.onQueryBusquedaChanged("")
+        assertEquals("", viewModel.uiState.value.queryBusqueda)
+    }
+
+    @Test
+    fun `CP - 08 - Limpiar busqueda`() = runTest {
+        viewModel.onQueryBusquedaChanged("Multímetro")
+        assertEquals("Multímetro", viewModel.uiState.value.queryBusqueda)
+        
+        viewModel.onQueryBusquedaChanged("")
+        assertEquals("", viewModel.uiState.value.queryBusqueda)
+    }
+
+    @Test
+    fun `CP - 09 - Modificar busqueda`() = runTest {
+        viewModel.onQueryBusquedaChanged("Arduino")
+        assertEquals("Arduino", viewModel.uiState.value.queryBusqueda)
+        
+        viewModel.onQueryBusquedaChanged("Cámara")
+        assertEquals("Cámara", viewModel.uiState.value.queryBusqueda)
     }
 }

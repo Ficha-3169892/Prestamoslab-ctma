@@ -36,8 +36,18 @@ fun CatalogoScreen(
     onMostrarDialogoNuevo: (Boolean) -> Unit,
     onNombreNuevoChanged: (String) -> Unit,
     onCategoriaNuevaChanged: (CategoriaEquipo) -> Unit,
-    onAgregarEquipo: () -> Unit
+    onAgregarEquipo: () -> Unit,
+    onQueryChanged: (String) -> Unit
 ) {
+    val equiposFiltrados = remember(uiState.equipos, uiState.queryBusqueda) {
+        if (uiState.queryBusqueda.isBlank()) {
+            uiState.equipos
+        } else {
+            val queryNormalizada = uiState.queryBusqueda.trim().lowercase()
+            uiState.equipos.filter { it.nombre.lowercase().contains(queryNormalizada) }
+        }
+    }
+
     Scaffold(
         containerColor = TechBackground,
         floatingActionButton = {
@@ -76,28 +86,65 @@ fun CatalogoScreen(
             // Header Colorido
             ResumenDashboard(uiState.equipos.count { it.estado == EstadoEquipo.DISPONIBLE })
 
+            // Campo de Búsqueda
+            OutlinedTextField(
+                value = uiState.queryBusqueda,
+                onValueChange = onQueryChanged,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                placeholder = { Text("Buscar equipo por nombre...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (uiState.queryBusqueda.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChanged("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "Limpiar")
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TechPrimary,
+                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
+                )
+            )
+
             Text(
                 "Catálogo de Equipos",
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextDark
             )
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(uiState.equipos) { equipo ->
-                    EquipoModernItem(
-                        equipo = equipo,
-                        onClick = { onEquipoSeleccionado(equipo.id) },
-                        onToggleEstado = { onToggleEstado(equipo.id) },
-                        onEliminar = { onEliminarEquipo(equipo.id) }
+            if (equiposFiltrados.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No hay resultados para la búsqueda",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextGray
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(equiposFiltrados) { equipo ->
+                        EquipoModernItem(
+                            equipo = equipo,
+                            onClick = { onEquipoSeleccionado(equipo.id) },
+                            onToggleEstado = { onToggleEstado(equipo.id) },
+                            onEliminar = { onEliminarEquipo(equipo.id) }
+                        )
+                    }
                 }
             }
         }
