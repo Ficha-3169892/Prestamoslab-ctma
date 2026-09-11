@@ -20,9 +20,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.prestamolabctma.model.EstadoSolicitud
 import com.example.prestamolabctma.ui.CatalogoScreen
-import com.example.prestamolabctma.ui.theme.*
+import com.example.prestamolabctma.ui.EquipoDetailScreen
 import com.example.prestamolabctma.ui.MisSolicitudesScreen
 import com.example.prestamolabctma.ui.SolicitudFormScreen
+import com.example.prestamolabctma.ui.theme.*
 import com.example.prestamolabctma.viewmodel.PrestamoViewModel
 
 @Composable
@@ -113,8 +114,7 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                 }
             }
         }
-    )
-{ innerPadding ->
+    ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = "catalogo",
@@ -125,7 +125,7 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                     uiState = uiState,
                     onEquipoSeleccionado = { equipoId ->
                         viewModel.seleccionarEquipo(equipoId)
-                        navController.navigate("formulario")
+                        navController.navigate("detalle")
                     },
                     onToggleEstado = { viewModel.toggleEstadoEquipo(it) },
                     onEliminarEquipo = { viewModel.eliminarEquipo(it) },
@@ -133,6 +133,13 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                     onNombreNuevoChanged = { viewModel.onNombreEquipoChanged(it) },
                     onCategoriaNuevaChanged = { viewModel.onCategoriaEquipoChanged(it) },
                     onAgregarEquipo = { viewModel.agregarEquipo() }
+                )
+            }
+            composable("detalle") {
+                EquipoDetailScreen(
+                    uiState = uiState,
+                    onSolicitar = { navController.navigate("formulario") },
+                    onVolver = { navController.popBackStack() }
                 )
             }
             composable("formulario") {

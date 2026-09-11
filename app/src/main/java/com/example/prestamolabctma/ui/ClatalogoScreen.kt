@@ -41,13 +41,15 @@ fun CatalogoScreen(
     Scaffold(
         containerColor = TechBackground,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onMostrarDialogoNuevo(true) },
-                containerColor = TechSecondary,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Equipo")
+            if (uiState.formularioEquipo.mostrarDialogo.not()) {
+                FloatingActionButton(
+                    onClick = { onMostrarDialogoNuevo(true) },
+                    containerColor = TechSecondary,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Agregar Equipo")
+                }
             }
         },
         topBar = {

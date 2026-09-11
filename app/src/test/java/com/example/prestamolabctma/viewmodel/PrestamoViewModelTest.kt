@@ -31,6 +31,30 @@ class PrestamoViewModelTest {
         Dispatchers.resetMain()
     }
 
+    @Test
+    fun `cargarDatos actualiza el estado correctamente`() = runTest {
+        val equipos = listOf(Equipo(1, "Test", CategoriaEquipo.COMPUTO, EstadoEquipo.DISPONIBLE))
+        coEvery { repository.obtenerEquipos() } returns equipos
+        
+        viewModel.cargarDatos()
+        advanceUntilIdle()
+
+        assertEquals(equipos, viewModel.uiState.value.equipos)
+        assertFalse(viewModel.uiState.value.estaCargando)
+    }
+
+    @Test
+    fun `seleccionarEquipo carga los datos del equipo en el estado`() = runTest {
+        val equipo = Equipo(1, "Detalle", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE, "Desc", listOf("E1"))
+        coEvery { repository.obtenerEquipo(1) } returns equipo
+
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+
+        assertEquals(equipo, viewModel.uiState.value.equipoSeleccionado)
+        assertEquals(1, viewModel.uiState.value.formulario.equipoId)
+    }
+
     /**
      * HU: Préstamos
      * CP-01 - Solicitar equipo disponible
@@ -210,7 +234,27 @@ class PrestamoViewModelTest {
 
     @Test
     fun `CP-11 - Solicitar multiples equipos disponibles exitosamente`() = runTest {
-        // ... (existing test code)
+        // Arrange
+        coEvery { repository.crearSolicitud(any()) } returns Result.success(Unit)
+        coEvery { repository.obtenerEquipos() } returns emptyList()
+
+        // Solicitud 1
+        viewModel.onAmbienteChanged("Lab 1")
+        viewModel.onPropositoChanged("Práctica 1 de laboratorio")
+        viewModel.onDuracionChanged("2")
+        viewModel.guardarSolicitud()
+        advanceUntilIdle()
+        assertEquals("¡Solicitud registrada correctamente!", viewModel.uiState.value.mensajeExito)
+
+        viewModel.limpiarMensajes()
+
+        // Solicitud 2
+        viewModel.onAmbienteChanged("Lab 2")
+        viewModel.onPropositoChanged("Práctica 2 de laboratorio")
+        viewModel.onDuracionChanged("2")
+        viewModel.guardarSolicitud()
+        advanceUntilIdle()
+        assertEquals("¡Solicitud registrada correctamente!", viewModel.uiState.value.mensajeExito)
     }
 
     /**
