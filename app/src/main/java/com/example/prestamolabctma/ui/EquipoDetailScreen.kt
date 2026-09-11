@@ -34,10 +34,13 @@ fun EquipoDetailScreen(
     val equipo = uiState.equipoSeleccionado ?: return
 
     Scaffold(
-        containerColor = BackgroundLight,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 title = { Text("Detalle de Equipo", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
@@ -60,14 +63,14 @@ fun EquipoDetailScreen(
                     .height(220.dp)
                     .padding(24.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(NeonCyan.copy(alpha = 0.05f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Inventory2,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp),
-                    tint = NeonCyan.copy(alpha = 0.4f)
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                 )
             }
 
@@ -86,12 +89,12 @@ fun EquipoDetailScreen(
                             text = equipo.nombre,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = TextDark
                         )
                         Text(
                             text = equipo.categoria.name,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = TextGray
                         )
                     }
                     BadgeEstadoModern(estado = equipo.estado)
@@ -103,13 +106,13 @@ fun EquipoDetailScreen(
                     text = "Descripción",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = TextDark
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = equipo.descripcion.ifBlank { "Sin descripción disponible." },
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
+                    color = TextGray,
                     lineHeight = 22.sp
                 )
 
@@ -120,7 +123,7 @@ fun EquipoDetailScreen(
                         text = "Especificaciones Técnicas",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = TextDark
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     equipo.especificaciones.forEach { espec ->
@@ -138,9 +141,9 @@ fun EquipoDetailScreen(
                         .height(56.dp),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonCyan,
-                        contentColor = DeepSpace,
-                        disabledContainerColor = NeonCyan.copy(alpha = 0.3f)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     )
                 ) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null)
@@ -168,13 +171,13 @@ fun EspecificacionRow(texto: String) {
             imageVector = Icons.Default.Label,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = PrimaryIndigo.copy(alpha = 0.6f)
+            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = texto,
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
+            color = TextGray
         )
     }
 }
