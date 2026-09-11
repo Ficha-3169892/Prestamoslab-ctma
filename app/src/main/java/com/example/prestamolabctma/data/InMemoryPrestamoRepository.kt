@@ -69,6 +69,15 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
+    override suspend fun actualizarEquipo(equipo: Equipo): Result<Unit> {
+        val index = equipos.indexOfFirst { it.id == equipo.id }
+        if (index != -1) {
+            equipos[index] = equipo
+            return Result.success(Unit)
+        }
+        return Result.failure(Exception("Equipo no encontrado"))
+    }
+
     override suspend fun eliminarEquipo(id: Int): Result<Unit> {
         val eliminado = equipos.removeIf { it.id == id }
         return if (eliminado) Result.success(Unit) else Result.failure(Exception("Equipo no encontrado"))
@@ -139,7 +148,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.APROBADA)
         
-        // Al aprobar, el equipo pasa de RESERVADO a PRESTADO
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.PRESTADO)
@@ -159,7 +167,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.RECHAZADA)
 
-        // Al rechazar, el equipo vuelve a estar DISPONIBLE
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)
@@ -175,7 +182,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         val solicitud = solicitudes[solicitudIndex]
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.DEVUELTA)
 
-        // Al devolver, el equipo vuelve a estar DISPONIBLE
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)

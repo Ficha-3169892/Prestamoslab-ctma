@@ -3,11 +3,14 @@ package com.example.prestamolabctma.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -19,11 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.prestamolabctma.model.EstadoSolicitud
-import com.example.prestamolabctma.ui.CatalogoScreen
-import com.example.prestamolabctma.ui.EquipoDetailScreen
-import com.example.prestamolabctma.ui.MisSolicitudesScreen
-import com.example.prestamolabctma.ui.SolicitudFormScreen
-import com.example.prestamolabctma.ui.theme.*
+import com.example.prestamolabctma.ui.*
 import com.example.prestamolabctma.viewmodel.PrestamoViewModel
 
 @Composable
@@ -33,40 +32,32 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val screens = listOf("catalogo", "solicitudes")
-    val showBottomBar = currentDestination?.route in screens
+    val showBottomBar = currentDestination?.route in listOf("catalogo", "solicitudes")
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.mensajeExito, uiState.mensajeError) {
+        uiState.mensajeExito?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.limpiarMensajes()
+        }
+        uiState.mensajeError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.limpiarMensajes()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = TechPrimary,
-                    tonalElevation = 0.dp
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp
                 ) {
                     NavigationBarItem(
-                        icon = { 
-                            BadgedBox(
-                                badge = {
-                                    val pendientes = uiState.solicitudes.count { it.estado == EstadoSolicitud.SOLICITADA }
-                                    if (pendientes > 0) {
-                                        Badge(containerColor = TechAccent, contentColor = Color.White) { 
-                                            Text(pendientes.toString()) 
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.Inventory, contentDescription = null)
-                            }
-                        },
-                        label = { Text("Inventario", fontWeight = FontWeight.Bold) },
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        label = { Text("Inicio") },
                         selected = currentDestination?.hierarchy?.any { it.route == "catalogo" } == true,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = TechPrimary,
-                            selectedTextColor = Color.White,
-                            unselectedIconColor = Color.White.copy(alpha = 0.6f),
-                            unselectedTextColor = Color.White.copy(alpha = 0.6f),
-                            indicatorColor = Color.White
-                        ),
                         onClick = {
                             navController.navigate("catalogo") {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -83,24 +74,15 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                                 badge = {
                                     val pendientes = uiState.solicitudes.count { it.estado == EstadoSolicitud.SOLICITADA }
                                     if (pendientes > 0) {
-                                        Badge(containerColor = TechAccent, contentColor = Color.White) { 
-                                            Text(pendientes.toString()) 
-                                        }
+                                        Badge { Text(pendientes.toString()) }
                                     }
                                 }
                             ) {
                                 Icon(Icons.Default.History, contentDescription = null)
                             }
                         },
-                        label = { Text("Solicitudes", fontWeight = FontWeight.Bold) },
+                        label = { Text("Mis Préstamos") },
                         selected = currentDestination?.hierarchy?.any { it.route == "solicitudes" } == true,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = TechPrimary,
-                            selectedTextColor = Color.White,
-                            unselectedIconColor = Color.White.copy(alpha = 0.6f),
-                            unselectedTextColor = Color.White.copy(alpha = 0.6f),
-                            indicatorColor = Color.White
-                        ),
                         onClick = {
                             navController.navigate("solicitudes") {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -123,18 +105,25 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
             composable("catalogo") {
                 CatalogoScreen(
                     uiState = uiState,
+                    onBusquedaChanged = { viewModel.onBusquedaChanged(it) },
                     onEquipoSeleccionado = { equipoId ->
                         viewModel.seleccionarEquipo(equipoId)
                         navController.navigate("detalle")
                     },
-                    onToggleEstado = { viewModel.toggleEstadoEquipo(it) },
-                    onEliminarEquipo = { viewModel.eliminarEquipo(it) },
-                    onMostrarDialogoNuevo = { viewModel.mostrarDialogoNuevoEquipo(it) },
-                    onNombreNuevoChanged = { viewModel.onNombreEquipoChanged(it) },
-                    onCategoriaNuevaChanged = { viewModel.onCategoriaEquipoChanged(it) },
-                    onAgregarEquipo = { viewModel.agregarEquipo() },
-                    onQueryChanged = { viewModel.onQueryBusquedaChanged(it) },
-                    onCategoriaFilterChanged = { viewModel.onCategoriaSelected(it) }
+                    onAgregarEquipo = {
+                        viewModel.prepararNuevoEquipo()
+                        navController.navigate("equipoForm")
+                    },
+                    onEditarEquipo = { equipo ->
+                        viewModel.prepararEditarEquipo(equipo)
+                        navController.navigate("equipoForm")
+                    },
+                    onEliminarEquipo = { id ->
+                        viewModel.eliminarEquipo(id)
+                    },
+                    onCategoriaFilterChanged = { categoria ->
+                        viewModel.onCategoriaSelected(categoria)
+                    }
                 )
             }
             composable("detalle") {
@@ -157,7 +146,15 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                     onCancelarSolicitud = { viewModel.cancelarSolicitud(it) },
                     onAprobarSolicitud = { viewModel.aprobarSolicitud(it) },
                     onRechazarSolicitud = { viewModel.rechazarSolicitud(it) },
-                    onFinalizarPrestamo = { viewModel.finalizarPrestamo(it) }
+                    onFinalizarPrestamo = { viewModel.finalizarPrestamo(it) },
+                    onVolver = { navController.popBackStack() }
+                )
+            }
+            composable("equipoForm") {
+                EquipoFormScreen(
+                    viewModel = viewModel,
+                    uiState = uiState,
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }

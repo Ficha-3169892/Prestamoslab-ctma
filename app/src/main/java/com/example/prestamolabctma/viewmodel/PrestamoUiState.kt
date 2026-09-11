@@ -6,8 +6,12 @@ import com.example.prestamolabctma.model.SolicitudPrestamo
 
 // Estado del formulario para agregar equipo
 data class FormularioEquipoState(
+    val id: Int = 0,
     val nombre: String = "",
+    val descripcion: String = "",
     val categoria: CategoriaEquipo = CategoriaEquipo.ELECTRONICA,
+    val errorNombre: String? = null,
+    val esValido: Boolean = false,
     val mostrarDialogo: Boolean = false
 )
 
@@ -27,11 +31,12 @@ data class FormularioSolicitudState(
 // Estado global de la interfaz gráfica
 data class PrestamoUiState(
     val equipos: List<Equipo> = emptyList(),
+    val queryBusqueda: String = "",
+    val equiposFiltrados: List<Equipo> = emptyList(),
     val solicitudes: List<SolicitudPrestamo> = emptyList(),
     val equipoSeleccionado: Equipo? = null,
     val formulario: FormularioSolicitudState = FormularioSolicitudState(),
     val formularioEquipo: FormularioEquipoState = FormularioEquipoState(),
-    val queryBusqueda: String = "",
     val categoriaSeleccionada: CategoriaEquipo? = null,
     val mensajeExito: String? = null,
     val mensajeError: String? = null,

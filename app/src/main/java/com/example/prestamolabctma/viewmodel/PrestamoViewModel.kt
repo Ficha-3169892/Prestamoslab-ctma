@@ -30,10 +30,25 @@ class PrestamoViewModel(
             _uiState.update {
                 it.copy(
                     equipos = listaEquipos,
+                    equiposFiltrados = listaEquipos,
                     solicitudes = listaSolicitudes,
                     estaCargando = false
                 )
             }
+        }
+    }
+
+    fun onBusquedaChanged(query: String) {
+        _uiState.update { estado ->
+            val filtrados = if (query.isEmpty()) {
+                estado.equipos
+            } else {
+                estado.equipos.filter { 
+                    it.nombre.contains(query, ignoreCase = true) || 
+                    it.categoria.name.contains(query, ignoreCase = true)
+                }
+            }
+            estado.copy(queryBusqueda = query, equiposFiltrados = filtrados)
         }
     }
 
@@ -52,7 +67,6 @@ class PrestamoViewModel(
         }
     }
 
-    // Actualiza los campos del formulario y valida en tiempo real
     fun onAmbienteChanged(nuevoAmbiente: String) {
         val error = if (nuevoAmbiente.isBlank()) "El ambiente o destino es obligatorio" else null
         _uiState.update { estado ->
@@ -106,7 +120,6 @@ class PrestamoViewModel(
                 duracionNum != null && duracionNum in 1..8
     }
 
-    // Crear la solicitud de préstamo
     fun guardarSolicitud() {
         val form = _uiState.value.formulario
         if (!form.esFormularioValido) return
@@ -205,15 +218,91 @@ class PrestamoViewModel(
         _uiState.update { it.copy(mensajeExito = null, mensajeError = null) }
     }
 
+    // --- CRUD EQUIPOS (feat/Ana) ---
+
+    fun onNombreEquipoChanged(nuevoNombre: String) {
+        _uiState.update { estado ->
+            val error = if (nuevoNombre.isBlank()) "El nombre es obligatorio" else null
+            val form = estado.formularioEquipo.copy(nombre = nuevoNombre, errorNombre = error)
+            estado.copy(formularioEquipo = form.copy(esValido = nuevoNombre.isNotBlank()))
+        }
+    }
+
+    fun onDescripcionEquipoChanged(nuevaDesc: String) {
+        _uiState.update { estado ->
+            estado.copy(formularioEquipo = estado.formularioEquipo.copy(descripcion = nuevaDesc))
+        }
+    }
+
+    fun onCategoriaEquipoChanged(nuevaCat: CategoriaEquipo) {
+        _uiState.update { estado ->
+            estado.copy(formularioEquipo = estado.formularioEquipo.copy(categoria = nuevaCat))
+        }
+    }
+
+    fun prepararNuevoEquipo() {
+        _uiState.update { it.copy(formularioEquipo = FormularioEquipoState()) }
+    }
+
+    fun prepararEditarEquipo(equipo: Equipo) {
+        _uiState.update { 
+            it.copy(
+                formularioEquipo = FormularioEquipoState(
+                    id = equipo.id,
+                    nombre = equipo.nombre,
+                    descripcion = equipo.descripcion,
+                    categoria = equipo.categoria,
+                    esValido = true
+                )
+            )
+        }
+    }
+
+    fun guardarEquipo() {
+        val form = _uiState.value.formularioEquipo
+        if (!form.esValido) return
+
+        val equipo = Equipo(
+            id = form.id,
+            nombre = form.nombre,
+            descripcion = form.descripcion,
+            categoria = form.categoria,
+            estado = if (form.id == 0) EstadoEquipo.DISPONIBLE 
+                     else _uiState.value.equipos.find { it.id == form.id }?.estado ?: EstadoEquipo.DISPONIBLE
+        )
+
+        viewModelScope.launch {
+            val resultado = if (equipo.id == 0) repository.agregarEquipo(equipo) 
+                            else repository.actualizarEquipo(equipo)
+            
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo guardado correctamente") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message) }
+            }
+        }
+    }
+
+    fun eliminarEquipo(id: Int) {
+        viewModelScope.launch {
+            repository.eliminarEquipo(id).onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo eliminado") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message) }
+            }
+        }
+    }
+
+    // --- Soporte para otras funciones de main si existen ---
     fun onQueryBusquedaChanged(nuevaQuery: String) {
-        _uiState.update { it.copy(queryBusqueda = nuevaQuery) }
+        onBusquedaChanged(nuevaQuery)
     }
 
     fun onCategoriaSelected(categoria: CategoriaEquipo?) {
         _uiState.update { it.copy(categoriaSeleccionada = categoria) }
     }
-
-    // --- Nuevas funcionalidades para Equipos ---
 
     fun toggleEstadoEquipo(equipoId: Int) {
         val equipo = _uiState.value.equipos.find { it.id == equipoId } ?: return
@@ -225,48 +314,6 @@ class PrestamoViewModel(
 
         viewModelScope.launch {
             repository.actualizarEstadoEquipo(equipoId, nuevoEstado).onSuccess {
-                cargarDatos()
-            }
-        }
-    }
-
-    fun mostrarDialogoNuevoEquipo(mostrar: Boolean) {
-        _uiState.update { it.copy(formularioEquipo = it.formularioEquipo.copy(mostrarDialogo = mostrar)) }
-    }
-
-    fun onNombreEquipoChanged(nombre: String) {
-        _uiState.update { it.copy(formularioEquipo = it.formularioEquipo.copy(nombre = nombre)) }
-    }
-
-    fun onCategoriaEquipoChanged(categoria: CategoriaEquipo) {
-        _uiState.update { it.copy(formularioEquipo = it.formularioEquipo.copy(categoria = categoria)) }
-    }
-
-    fun agregarEquipo() {
-        val nombre = _uiState.value.formularioEquipo.nombre
-        val categoria = _uiState.value.formularioEquipo.categoria
-
-        if (nombre.isBlank()) return
-
-        val nuevoEquipo = Equipo(
-            id = 0,
-            nombre = nombre,
-            categoria = categoria,
-            estado = EstadoEquipo.DISPONIBLE
-        )
-
-        viewModelScope.launch {
-            repository.agregarEquipo(nuevoEquipo).onSuccess {
-                cargarDatos()
-                mostrarDialogoNuevoEquipo(false)
-                _uiState.update { it.copy(formularioEquipo = FormularioEquipoState()) }
-            }
-        }
-    }
-
-    fun eliminarEquipo(equipoId: Int) {
-        viewModelScope.launch {
-            repository.eliminarEquipo(equipoId).onSuccess {
                 cargarDatos()
             }
         }

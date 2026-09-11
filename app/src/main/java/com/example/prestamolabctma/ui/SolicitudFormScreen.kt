@@ -37,13 +37,13 @@ fun SolicitudFormScreen(
     Scaffold(
         containerColor = TechBackground,
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = TechPrimary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 ),
-                title = { Text("Nueva Solicitud", fontWeight = FontWeight.Bold) },
+                title = { Text("Nueva Solicitud", fontWeight = FontWeight.Black) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -63,7 +63,7 @@ fun SolicitudFormScreen(
             if (form.errorEquipo != null) {
                 Text(
                     text = form.errorEquipo,
-                    color = MaterialTheme.colorScheme.error,
+                    color = StatusRedVibrant,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -71,31 +71,32 @@ fun SolicitudFormScreen(
             if (equipo != null) {
                 // Info Card del Equipo
                 Card(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = TechSurface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            modifier = Modifier.size(48.dp),
-                            shape = CircleShape,
-                            color = TechPrimary.copy(alpha = 0.1f)
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(TechPrimary.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Info, contentDescription = null, tint = TechPrimary)
-                            }
+                            Icon(Icons.Default.Info, contentDescription = null, tint = TechPrimary, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
                                 equipo.nombre, 
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Black,
                                 color = TechPrimary
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
                             BadgeEstadoModern(estado = equipo.estado)
                         }
                     }
