@@ -237,13 +237,18 @@ fun EquipoModernItem(
     onToggleEstado: () -> Unit,
     onEliminar: () -> Unit
 ) {
+    val estaDisponible = equipo.estado == EstadoEquipo.DISPONIBLE
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(enabled = estaDisponible, onClick = onClick)
+            .graphicsLayer(alpha = if (estaDisponible) 1f else 0.7f),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = TechSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = if (estaDisponible) TechSurface else Color.LightGray.copy(alpha = 0.1f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (estaDisponible) 2.dp else 0.dp)
     ) {
         Column {
             Row(
@@ -325,25 +330,37 @@ fun EquipoModernItem(
 
 @Composable
 fun BadgeEstadoModern(estado: EstadoEquipo) {
-    val (color, label) = when (estado) {
-        EstadoEquipo.DISPONIBLE -> StatusGreenVibrant to "Disponible"
-        EstadoEquipo.RESERVADO -> StatusOrangeVibrant to "Reservado"
-        EstadoEquipo.PRESTADO -> StatusRedVibrant to "Prestado"
-        EstadoEquipo.NO_DISPONIBLE -> Color.Gray to "No Disponible"
+    val (color, label, icon) = when (estado) {
+        EstadoEquipo.DISPONIBLE -> Triple(StatusGreenVibrant, "Disponible", Icons.Default.CheckCircle)
+        EstadoEquipo.RESERVADO -> Triple(StatusOrangeVibrant, "Reservado", Icons.Default.Schedule)
+        EstadoEquipo.PRESTADO -> Triple(StatusRedVibrant, "Prestado", Icons.Default.Block)
+        EstadoEquipo.NO_DISPONIBLE -> Triple(Color.Gray, "No Disponible", Icons.Default.Report)
     }
 
     Surface(
-        color = color,
-        shape = CircleShape
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
     ) {
-        Text(
-            text = label.uppercase(),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Black,
-            color = Color.White,
-            fontSize = 9.sp
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(12.dp)
+            )
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+                color = color,
+                fontSize = 9.sp
+            )
+        }
     }
 }
 
