@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,8 +21,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import com.example.prestamolabctma.model.CategoriaEquipo
 import com.example.prestamolabctma.model.Equipo
 import com.example.prestamolabctma.model.EstadoEquipo
@@ -32,16 +31,16 @@ import com.example.prestamolabctma.viewmodel.PrestamoUiState
 @Composable
 fun CatalogoScreen(
     uiState: PrestamoUiState,
+    onBusquedaChanged: (String) -> Unit,
     onEquipoSeleccionado: (Int) -> Unit,
-    onToggleEstado: (Int) -> Unit,
-    onEliminarEquipo: (Int) -> Unit,
-    onMostrarDialogoNuevo: (Boolean) -> Unit,
-    onNombreNuevoChanged: (String) -> Unit,
-    onCategoriaNuevaChanged: (CategoriaEquipo) -> Unit,
     onAgregarEquipo: () -> Unit,
-    onQueryChanged: (String) -> Unit,
+    onEditarEquipo: (Equipo) -> Unit,
+    onEliminarEquipo: (Int) -> Unit,
     onCategoriaFilterChanged: (CategoriaEquipo?) -> Unit
 ) {
+    var equipoMostrarDetalle by remember { mutableStateOf<Equipo?>(null) }
+    var equipoAEliminar by remember { mutableStateOf<Int?>(null) }
+
     val equiposFiltrados = remember(uiState.equipos, uiState.queryBusqueda, uiState.categoriaSeleccionada) {
         uiState.equipos.filter { equipo ->
             val matchesQuery = uiState.queryBusqueda.isBlank() || 
@@ -54,32 +53,30 @@ fun CatalogoScreen(
 
     Scaffold(
         containerColor = TechBackground,
-        floatingActionButton = {
-            if (uiState.formularioEquipo.mostrarDialogo.not()) {
-                FloatingActionButton(
-                    onClick = { onMostrarDialogoNuevo(true) },
-                    containerColor = TechSecondary,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar Equipo")
-                }
-            }
-        },
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TechPrimary,
-                    titleContentColor = Color.White
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = TechPrimary
                 ),
                 title = {
                     Text(
                         "PréstamoLab CTMA",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
                     )
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAgregarEquipo,
+                containerColor = TechSecondary,
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Añadir Equipo")
+            }
         }
     ) { paddingValues ->
         Column(
@@ -87,31 +84,23 @@ fun CatalogoScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Header Colorido
-            ResumenDashboard(uiState.equipos.count { it.estado == EstadoEquipo.DISPONIBLE })
-
-            // Campo de Búsqueda
+            // Buscador
             OutlinedTextField(
                 value = uiState.queryBusqueda,
-                onValueChange = onQueryChanged,
+                onValueChange = onBusquedaChanged,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
-                placeholder = { Text("Buscar equipo por nombre...") },
+                placeholder = { Text("Buscar equipo...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (uiState.queryBusqueda.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChanged("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Limpiar")
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
                     focusedBorderColor = TechPrimary,
                     unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
-                )
+                ),
+                singleLine = true
             )
 
             // Filtro de Categorías
@@ -120,311 +109,85 @@ fun CatalogoScreen(
                 onCategorySelected = onCategoriaFilterChanged
             )
 
+            // Resumen
+            ResumenDashboard(uiState.equipos.count { it.estado == EstadoEquipo.DISPONIBLE })
+
             Text(
                 "Catálogo de Equipos",
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = TextDark
             )
 
             if (equiposFiltrados.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "No hay resultados para la búsqueda",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray
-                    )
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No se encontraron equipos", color = TextGray)
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
                     items(equiposFiltrados) { equipo ->
-                        EquipoModernItem(
-                            equipo = equipo,
-                            onClick = { onEquipoSeleccionado(equipo.id) },
-                            onToggleEstado = { onToggleEstado(equipo.id) },
-                            onEliminar = { onEliminarEquipo(equipo.id) }
-                        )
+                        EquipoModernItem(equipo = equipo, onClick = { equipoMostrarDetalle = equipo })
                     }
                 }
             }
         }
 
-        if (uiState.formularioEquipo.mostrarDialogo) {
-            NuevoEquipoDialog(
-                state = uiState.formularioEquipo,
-                onNombreChanged = onNombreNuevoChanged,
-                onCategoriaChanged = onCategoriaNuevaChanged,
-                onConfirmar = onAgregarEquipo,
-                onDismiss = { onMostrarDialogoNuevo(false) }
-            )
-        }
-    }
-}
-
-@Composable
-fun ResumenDashboard(disponibles: Int) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = TechPrimary),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(TechPrimary, TechSecondary)
-                    )
-                )
-                .padding(24.dp)
-        ) {
-            Column {
-                Text(
-                    "EQUIPOS DISPONIBLES",
-                    color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        disponibles.toString(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.displayLarge,
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        "unidades listas\npara préstamo",
-                        color = Color.White.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 18.sp
-                    )
+        // Dialogo de Detalle
+        equipoMostrarDetalle?.let { equipo ->
+            DetalleEquipoDialog(
+                equipo = equipo,
+                onDismiss = { equipoMostrarDetalle = null },
+                onConfirmar = {
+                    equipoMostrarDetalle = null
+                    onEquipoSeleccionado(equipo.id)
+                },
+                onEditar = {
+                    equipoMostrarDetalle = null
+                    onEditarEquipo(equipo)
+                },
+                onEliminar = {
+                    equipoMostrarDetalle = null
+                    equipoAEliminar = equipo.id
                 }
-            }
-            Icon(
-                imageVector = Icons.Default.Inventory2,
-                contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(64.dp)
-                    .graphicsLayer(alpha = 0.2f),
-                tint = Color.White
             )
         }
-    }
-}
 
-@Composable
-fun EquipoModernItem(
-    equipo: Equipo,
-    onClick: () -> Unit,
-    onToggleEstado: () -> Unit,
-    onEliminar: () -> Unit
-) {
-    val estaDisponible = equipo.estado == EstadoEquipo.DISPONIBLE
-    
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = estaDisponible, onClick = onClick)
-            .graphicsLayer(alpha = if (estaDisponible) 1f else 0.7f),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = if (estaDisponible) TechSurface else Color.LightGray.copy(alpha = 0.1f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (estaDisponible) 2.dp else 0.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = when(equipo.categoria) {
-                        CategoriaEquipo.MEDICION -> CatMedicion.copy(alpha = 0.1f)
-                        CategoriaEquipo.ELECTRONICA -> CatElectronica.copy(alpha = 0.1f)
-                        CategoriaEquipo.COMPUTO -> CatComputo.copy(alpha = 0.1f)
-                        else -> TechPrimary.copy(alpha = 0.1f)
+        // Dialogo de Confirmación de Eliminación
+        equipoAEliminar?.let { id ->
+            AlertDialog(
+                onDismissRequest = { equipoAEliminar = null },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onEliminarEquipo(id)
+                            equipoAEliminar = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusRedVibrant)
+                    ) {
+                        Text("Eliminar")
                     }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Inventory2,
-                            contentDescription = null,
-                            tint = TechPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
+                },
+                dismissButton = {
+                    TextButton(onClick = { equipoAEliminar = null }) {
+                        Text("Cancelar")
                     }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = equipo.nombre,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark
-                    )
-                    Text(
-                        text = equipo.categoria.name,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TechPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                BadgeEstadoModern(estado = equipo.estado)
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onToggleEstado,
-                    colors = ButtonDefaults.textButtonColors(contentColor = TechPrimary)
-                ) {
-                    Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("ESTADO", fontWeight = FontWeight.Bold)
-                }
-                
-                IconButton(onClick = onEliminar) {
-                    Icon(
-                        imageVector = Icons.Default.Delete, 
-                        contentDescription = "Borrar", 
-                        tint = StatusRedVibrant.copy(alpha = 0.8f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun BadgeEstadoModern(estado: EstadoEquipo) {
-    val (color, label, icon) = when (estado) {
-        EstadoEquipo.DISPONIBLE -> Triple(StatusGreenVibrant, "Disponible", Icons.Default.CheckCircle)
-        EstadoEquipo.RESERVADO -> Triple(StatusOrangeVibrant, "Reservado", Icons.Default.Schedule)
-        EstadoEquipo.PRESTADO -> Triple(StatusRedVibrant, "Prestado", Icons.Default.Block)
-        EstadoEquipo.NO_DISPONIBLE -> Triple(Color.Gray, "No Disponible", Icons.Default.Report)
-    }
-
-    Surface(
-        color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(8.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(12.dp)
-            )
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Black,
-                color = color,
-                fontSize = 9.sp
+                },
+                title = { Text("¿Eliminar equipo?") },
+                text = { Text("Esta acción eliminará el equipo del catálogo permanentemente.") },
+                shape = RoundedCornerShape(20.dp),
+                containerColor = Color.White
             )
         }
     }
 }
 
-@Composable
-fun NuevoEquipoDialog(
-    state: com.example.prestamolabctma.viewmodel.FormularioEquipoState,
-    onNombreChanged: (String) -> Unit,
-    onCategoriaChanged: (CategoriaEquipo) -> Unit,
-    onConfirmar: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Agregar Nuevo Equipo", fontWeight = FontWeight.Bold) },
-        containerColor = TechSurface,
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = state.nombre,
-                    onValueChange = onNombreChanged,
-                    label = { Text("Nombre") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Text("Categoría:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-
-                Column {
-                    CategoriaEquipo.entries.forEach { categoria ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onCategoriaChanged(categoria) }
-                                .padding(vertical = 2.dp)
-                        ) {
-                            RadioButton(
-                                selected = state.categoria == categoria,
-                                onClick = { onCategoriaChanged(categoria) }
-                            )
-                            Text(categoria.name, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirmar, 
-                enabled = state.nombre.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = TechPrimary)
-            ) {
-                Text("Agregar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = TextGray)
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryFilterRow(
     selectedCategory: CategoriaEquipo?,
@@ -459,5 +222,223 @@ fun CategoryFilterRow(
                 )
             )
         }
+    }
+}
+
+@Composable
+fun DetalleEquipoDialog(
+    equipo: Equipo,
+    onDismiss: () -> Unit,
+    onConfirmar: () -> Unit,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = onConfirmar,
+                enabled = equipo.estado == EstadoEquipo.DISPONIBLE,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TechPrimary)
+            ) {
+                Text(if (equipo.estado == EstadoEquipo.DISPONIBLE) "Solicitar Préstamo" else "No Disponible")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar")
+            }
+        },
+        title = { 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(equipo.nombre, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Row {
+                    IconButton(onClick = onEditar) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TechPrimary)
+                    }
+                    IconButton(onClick = onEliminar) {
+                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = StatusRedVibrant)
+                    }
+                }
+            }
+        },
+        text = {
+            Column {
+                BadgeEstadoModern(estado = equipo.estado)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = equipo.descripcion.ifBlank { "Sin descripción disponible." },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextDark
+                )
+                if (equipo.especificaciones.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Especificaciones:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    equipo.especificaciones.forEach { spec ->
+                        Text("• $spec", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Categoría: ${equipo.categoria.name}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextGray
+                )
+            }
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = Color.White
+    )
+}
+
+@Composable
+fun ResumenDashboard(disponibles: Int) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(TechPrimary, TechSecondary)
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Text(
+                    "Estado del Inventario",
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        disponibles.toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        color = Color.White.copy(alpha = 0.2f),
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            "Disponibles",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.Inventory2,
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(80.dp)
+                    .graphicsLayer(alpha = 0.15f, rotationZ = -15f),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun EquipoModernItem(equipo: Equipo, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val iconBackground = when (equipo.estado) {
+                EstadoEquipo.DISPONIBLE -> TechPrimary.copy(alpha = 0.1f)
+                else -> Color(0xFFF1F5F9)
+            }
+            
+            val iconTint = when (equipo.estado) {
+                EstadoEquipo.DISPONIBLE -> TechPrimary
+                else -> TextGray
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(iconBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Inventory2,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = equipo.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextDark
+                )
+                Text(
+                    text = equipo.categoria.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextGray
+                )
+            }
+
+            BadgeEstadoModern(estado = equipo.estado)
+        }
+    }
+}
+
+@Composable
+fun BadgeEstadoModern(estado: EstadoEquipo) {
+    val (color, label) = when (estado) {
+        EstadoEquipo.DISPONIBLE -> StatusGreenVibrant to "Disponible"
+        EstadoEquipo.RESERVADO -> StatusOrangeVibrant to "Reservado"
+        EstadoEquipo.PRESTADO -> StatusRedVibrant to "Prestado"
+        EstadoEquipo.NO_DISPONIBLE -> Color.Gray to "No Disponible"
+    }
+
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = label.uppercase(),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
     }
 }
