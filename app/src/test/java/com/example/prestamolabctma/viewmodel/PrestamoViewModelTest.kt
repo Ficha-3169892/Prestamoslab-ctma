@@ -312,4 +312,115 @@ class PrestamoViewModelTest {
         // Assert
         assertEquals("Equipo ya reservado", viewModel.uiState.value.mensajeError)
     }
+
+    // --- Tests para HU-6: Validación de duración ---
+
+    @Test
+    fun `CP - 01 - Duracion igual a 0`() = runTest {
+        viewModel.onDuracionChanged("0")
+        assertEquals("La duración debe ser mayor a 0", viewModel.uiState.value.formulario.errorDuracion)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `HU 6 CP - 02 - Duracion negativa`() = runTest {
+        viewModel.onDuracionChanged("-1")
+        assertEquals("La duración debe ser mayor a 0", viewModel.uiState.value.formulario.errorDuracion)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `CP - 03 - Duracion valida`() = runTest {
+        viewModel.onAmbienteChanged("Lab A")
+        viewModel.onPropositoChanged("Practica valida de 10 chars")
+        viewModel.onDuracionChanged("5")
+        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+        assertTrue(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `CP - 04 - Duracion maxima permitida`() = runTest {
+        viewModel.onDuracionChanged("8")
+        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+    }
+
+    @Test
+    fun `CP - 05 - Duracion superior al maximo`() = runTest {
+        viewModel.onDuracionChanged("9")
+        assertEquals("La duración máxima son 8 horas", viewModel.uiState.value.formulario.errorDuracion)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `CP - 06 - Campo vacio`() = runTest {
+        viewModel.onDuracionChanged("")
+        assertEquals("La duración es obligatoria", viewModel.uiState.value.formulario.errorDuracion)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `CP - 07 - Valor decimal`() = runTest {
+        viewModel.onDuracionChanged("2.5")
+        assertEquals("Ingresa un número válido", viewModel.uiState.value.formulario.errorDuracion)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `CP - 08 - Entrada no numerica`() = runTest {
+        viewModel.onDuracionChanged("abc")
+        assertEquals("Ingresa un número válido", viewModel.uiState.value.formulario.errorDuracion)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `CP - 09 - Correccion del error`() = runTest {
+        viewModel.onDuracionChanged("10") // Error
+        assertNotNull(viewModel.uiState.value.formulario.errorDuracion)
+        
+        viewModel.onDuracionChanged("4") // Corrección
+        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+    }
+
+    @Test
+    fun `CP - 10 - Crear solicitud con duracion invalida`() = runTest {
+        viewModel.onAmbienteChanged("Ambiente")
+        viewModel.onPropositoChanged("Proposito valido")
+        viewModel.onDuracionChanged("10") // Invalida
+        
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+        
+        // Intentar guardar no debería llamar al repositorio (validado en ViewModel)
+        viewModel.guardarSolicitud()
+        coVerify(exactly = 0) { repository.crearSolicitud(any()) }
+    }
+
+    @Test
+    fun `CP - 11 - Crear solicitud completamente valida`() = runTest {
+        coEvery { repository.crearSolicitud(any()) } returns Result.success(Unit)
+        
+        viewModel.onAmbienteChanged("Lab A")
+        viewModel.onPropositoChanged("Practica de electronica")
+        viewModel.onDuracionChanged("3")
+        
+        assertTrue(viewModel.uiState.value.formulario.esFormularioValido)
+        viewModel.guardarSolicitud()
+        advanceUntilIdle()
+        
+        assertEquals("¡Solicitud registrada correctamente!", viewModel.uiState.value.mensajeExito)
+    }
+
+    @Test
+    fun `CP - 12 - Validacion del limite maximo`() = runTest {
+        // Valor inferior al máximo
+        viewModel.onDuracionChanged("7")
+        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+        
+        // Valor máximo
+        viewModel.onDuracionChanged("8")
+        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+        
+        // Valor superior al máximo
+        viewModel.onDuracionChanged("9")
+        assertEquals("La duración máxima son 8 horas", viewModel.uiState.value.formulario.errorDuracion)
+    }
 }
