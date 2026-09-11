@@ -205,6 +205,10 @@ class PrestamoViewModel(
         _uiState.update { it.copy(mensajeExito = null, mensajeError = null) }
     }
 
+    fun onQueryBusquedaChanged(nuevaQuery: String) {
+        _uiState.update { it.copy(queryBusqueda = nuevaQuery) }
+    }
+
     // --- Nuevas funcionalidades para Equipos ---
 
     fun toggleEstadoEquipo(equipoId: Int) {
