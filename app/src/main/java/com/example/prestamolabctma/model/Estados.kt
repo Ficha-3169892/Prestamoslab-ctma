@@ -11,7 +11,8 @@ enum class CategoriaEquipo {
 enum class EstadoEquipo {
     DISPONIBLE,
     RESERVADO,
-    PRESTADO
+    PRESTADO,
+    NO_DISPONIBLE
 }
 
 enum class EstadoSolicitud {

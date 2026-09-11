@@ -8,10 +8,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.prestamolabctma.model.CategoriaEquipo
 import com.example.prestamolabctma.model.Equipo
 import com.example.prestamolabctma.model.EstadoEquipo
 import com.example.prestamolabctma.ui.theme.*
@@ -31,37 +31,39 @@ import com.example.prestamolabctma.viewmodel.PrestamoUiState
 fun CatalogoScreen(
     uiState: PrestamoUiState,
     onEquipoSeleccionado: (Int) -> Unit,
-    onVerSolicitudes: () -> Unit
+    onToggleEstado: (Int) -> Unit,
+    onEliminarEquipo: (Int) -> Unit,
+    onMostrarDialogoNuevo: (Boolean) -> Unit,
+    onNombreNuevoChanged: (String) -> Unit,
+    onCategoriaNuevaChanged: (CategoriaEquipo) -> Unit,
+    onAgregarEquipo: () -> Unit
 ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = TechBackground,
+        floatingActionButton = {
+            if (uiState.formularioEquipo.mostrarDialogo.not()) {
+                FloatingActionButton(
+                    onClick = { onMostrarDialogoNuevo(true) },
+                    containerColor = TechSecondary,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Agregar Equipo")
+                }
+            }
+        },
         topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = TechPrimary,
+                    titleContentColor = Color.White
                 ),
                 title = {
                     Text(
-                        "PréstamoLab",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-1).sp
+                        "PréstamoLab CTMA",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black
                     )
-                },
-                actions = {
-                    IconButton(
-                        onClick = onVerSolicitudes,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Historial",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
             )
         }
@@ -71,31 +73,43 @@ fun CatalogoScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Header Resumen
+            // Header Colorido
             ResumenDashboard(uiState.equipos.count { it.estado == EstadoEquipo.DISPONIBLE })
 
             Text(
                 "Catálogo de Equipos",
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextDark
             )
 
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(uiState.equipos) { equipo ->
-                    TarjetaEquipoItem(
-                        nombre = equipo.nombre,
-                        categoria = equipo.categoria.name,
-                        disponible = equipo.estado == EstadoEquipo.DISPONIBLE,
-                        onClick = { onEquipoSeleccionado(equipo.id) }
+                    EquipoModernItem(
+                        equipo = equipo,
+                        onClick = { onEquipoSeleccionado(equipo.id) },
+                        onToggleEstado = { onToggleEstado(equipo.id) },
+                        onEliminar = { onEliminarEquipo(equipo.id) }
                     )
                 }
             }
+        }
+
+        if (uiState.formularioEquipo.mostrarDialogo) {
+            NuevoEquipoDialog(
+                state = uiState.formularioEquipo,
+                onNombreChanged = onNombreNuevoChanged,
+                onCategoriaChanged = onCategoriaNuevaChanged,
+                onConfirmar = onAgregarEquipo,
+                onDismiss = { onMostrarDialogoNuevo(false) }
+            )
         }
     }
 }
@@ -105,39 +119,44 @@ fun ResumenDashboard(disponibles: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(24.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+            .padding(16.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = TechPrimary),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     brush = Brush.horizontalGradient(
-                        listOf(NeonCyan, NeonPurple)
+                        colors = listOf(TechPrimary, TechSecondary)
                     )
                 )
                 .padding(24.dp)
         ) {
             Column {
                 Text(
-                    "Equipos Disponibles",
+                    "EQUIPOS DISPONIBLES",
                     color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         disponibles.toString(),
                         color = Color.White,
                         style = MaterialTheme.typography.displayLarge,
-                        fontSize = 42.sp
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Black
                     )
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        " unidades",
-                        color = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                        "unidades listas\npara préstamo",
+                        color = Color.White.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 18.sp
                     )
                 }
             }
@@ -155,76 +174,93 @@ fun ResumenDashboard(disponibles: Int) {
 }
 
 @Composable
-fun TarjetaEquipoItem(nombre: String, categoria: String, disponible: Boolean, onClick: () -> Unit) {
+fun EquipoModernItem(
+    equipo: Equipo,
+    onClick: () -> Unit,
+    onToggleEstado: () -> Unit,
+    onEliminar: () -> Unit
+) {
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = TechSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Column {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(
-                            color = NeonCyan.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.size(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = when(equipo.categoria) {
+                        CategoriaEquipo.MEDICION -> CatMedicion.copy(alpha = 0.1f)
+                        CategoriaEquipo.ELECTRONICA -> CatElectronica.copy(alpha = 0.1f)
+                        CategoriaEquipo.COMPUTO -> CatComputo.copy(alpha = 0.1f)
+                        else -> TechPrimary.copy(alpha = 0.1f)
+                    }
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Inventory2,
-                        contentDescription = null,
-                        tint = NeonCyan,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Inventory2,
+                            contentDescription = null,
+                            tint = TechPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = nombre,
+                        text = equipo.nombre,
                         style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
                     )
                     Text(
-                        text = categoria.uppercase(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        text = equipo.categoria.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TechPrimary,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+
+                BadgeEstadoModern(estado = equipo.estado)
             }
 
-            // Badge de Estado
-            val bgBadge = if (disponible) GreenDisponibleBg else RedPrestadoBg
-            val textBadge = if (disponible) GreenDisponible else RedPrestado
-            val labelBadge = if (disponible) "DISPONIBLE" else "PRESTADO"
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
 
-            Surface(
-                color = bgBadge,
-                shape = RoundedCornerShape(50)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = labelBadge,
-                    color = textBadge,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
+                TextButton(
+                    onClick = onToggleEstado,
+                    colors = ButtonDefaults.textButtonColors(contentColor = TechPrimary)
+                ) {
+                    Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("ESTADO", fontWeight = FontWeight.Bold)
+                }
+                
+                IconButton(onClick = onEliminar) {
+                    Icon(
+                        imageVector = Icons.Default.Delete, 
+                        contentDescription = "Borrar", 
+                        tint = StatusRedVibrant.copy(alpha = 0.8f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -232,22 +268,84 @@ fun TarjetaEquipoItem(nombre: String, categoria: String, disponible: Boolean, on
 
 @Composable
 fun BadgeEstadoModern(estado: EstadoEquipo) {
-    val (color, colorBg, label) = when (estado) {
-        EstadoEquipo.DISPONIBLE -> Triple(GreenDisponible, GreenDisponibleBg, "Disponible")
-        EstadoEquipo.RESERVADO -> Triple(OrangeReservado, OrangeReservadoBg, "Reservado")
-        EstadoEquipo.PRESTADO -> Triple(RedPrestado, RedPrestadoBg, "Prestado")
+    val (color, label) = when (estado) {
+        EstadoEquipo.DISPONIBLE -> StatusGreenVibrant to "Disponible"
+        EstadoEquipo.RESERVADO -> StatusOrangeVibrant to "Reservado"
+        EstadoEquipo.PRESTADO -> StatusRedVibrant to "Prestado"
+        EstadoEquipo.NO_DISPONIBLE -> Color.Gray to "No Disponible"
     }
 
     Surface(
-        color = colorBg,
+        color = color,
         shape = CircleShape
     ) {
         Text(
             text = label.uppercase(),
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = color
+            fontWeight = FontWeight.Black,
+            color = Color.White,
+            fontSize = 9.sp
         )
     }
+}
+
+@Composable
+fun NuevoEquipoDialog(
+    state: com.example.prestamolabctma.viewmodel.FormularioEquipoState,
+    onNombreChanged: (String) -> Unit,
+    onCategoriaChanged: (CategoriaEquipo) -> Unit,
+    onConfirmar: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar Nuevo Equipo", fontWeight = FontWeight.Bold) },
+        containerColor = TechSurface,
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = state.nombre,
+                    onValueChange = onNombreChanged,
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Text("Categoría:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+
+                Column {
+                    CategoriaEquipo.entries.forEach { categoria ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onCategoriaChanged(categoria) }
+                                .padding(vertical = 2.dp)
+                        ) {
+                            RadioButton(
+                                selected = state.categoria == categoria,
+                                onClick = { onCategoriaChanged(categoria) }
+                            )
+                            Text(categoria.name, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirmar, 
+                enabled = state.nombre.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = TechPrimary)
+            ) {
+                Text("Agregar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = TextGray)
+            }
+        }
+    )
 }

@@ -2,57 +2,31 @@ package com.example.prestamolabctma.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta NEON / CYBERPUNK
-val NeonCyan = Color(0xFF00FBFF)
-val NeonPurple = Color(0xFFBC13FE)
-val NeonPink = Color(0xFFFF00E0)
+// Paleta High-Tech Colorida
+val TechPrimary = Color(0xFF3A86FF) // Azul Eléctrico
+val TechSecondary = Color(0xFF8338EC) // Violeta
+val TechAccent = Color(0xFFFB5607) // Naranja Vibrante
+val TechBackground = Color(0xFFF8F9FF) // Blanco con tinte azulado
+val TechSurface = Color(0xFFFFFFFF)
 
-// Fondos y Superficies (Oscuros)
-val DeepSpace = Color(0xFF0A0C10)
-val SurfaceDark = Color(0xFF161B22)
+// Estados Sólidos
+val StatusGreenVibrant = Color(0xFF06D6A0)
+val StatusRedVibrant = Color(0xFFEF476F)
+val StatusOrangeVibrant = Color(0xFFFFD166)
 
-// Estados Neon
-val NeonGreen = Color(0xFF39FF14)
-val NeonGreenBg = Color(0xFF0D2805)
+// Compatibilidad
+val PrimaryBlue = TechPrimary
+val TextDark = Color(0xFF212529)
+val TextGray = Color(0xFF6C757D)
+val BackgroundSlate = TechBackground
+val SurfaceWhite = TechSurface
 
-val NeonRed = Color(0xFFFF3131)
-val NeonRedBg = Color(0xFF2E0A0A)
+val StatusGreen = StatusGreenVibrant
+val StatusOrange = StatusOrangeVibrant
+val StatusRed = StatusRedVibrant
 
-val NeonOrange = Color(0xFFFFAC1C)
-val NeonOrangeBg = Color(0xFF2E1A05)
-
-// Textos
-val TextWhite = Color(0xFFFFFFFF)
-val TextCyanLight = Color(0xFFE0FFFF)
-val TextGrayLight = Color(0xFF8B949E)
-
-// Mapeos de nombres anteriores (Compatibilidad)
-val PrimaryIndigo = NeonCyan
-val PrimaryDarkIndigo = Color(0xFF00B4D8)
-val PrimaryLightIndigo = NeonPurple
-
-val BackgroundLight = DeepSpace
-val SurfaceCard = SurfaceDark
-
-val GreenDisponible = NeonGreen
-val GreenDisponibleBg = NeonGreenBg
-
-val RedPrestado = NeonRed
-val RedPrestadoBg = NeonRedBg
-
-val OrangeReservado = NeonOrange
-val OrangeReservadoBg = NeonOrangeBg
-
-val TextPrimary = TextWhite
-val TextSecondary = TextGrayLight
-
-// Alias de compatibilidad antiguos
-val PrimaryBlue = NeonCyan
-val AccentGreen = NeonGreen
-val TextDark = TextWhite
-val TextGray = TextGrayLight
-val StatusGreen = NeonGreen
-val StatusRed = NeonRed
-val StatusOrange = NeonOrange
-val BackgroundSlate = DeepSpace
-val SurfaceWhite = SurfaceDark
+// Colores adicionales para Categorías
+val CatMedicion = Color(0xFF4CC9F0)
+val CatElectronica = Color(0xFF4895EF)
+val CatComputo = Color(0xFF4361EE)
+val CatHerramientas = Color(0xFF3F37C9)

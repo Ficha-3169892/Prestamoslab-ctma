@@ -1,7 +1,15 @@
 package com.example.prestamolabctma.viewmodel
 
+import com.example.prestamolabctma.model.CategoriaEquipo
 import com.example.prestamolabctma.model.Equipo
 import com.example.prestamolabctma.model.SolicitudPrestamo
+
+// Estado del formulario para agregar equipo
+data class FormularioEquipoState(
+    val nombre: String = "",
+    val categoria: CategoriaEquipo = CategoriaEquipo.ELECTRONICA,
+    val mostrarDialogo: Boolean = false
+)
 
 // Estado del formulario de solicitud y sus mensajes de error
 data class FormularioSolicitudState(
@@ -21,6 +29,7 @@ data class PrestamoUiState(
     val solicitudes: List<SolicitudPrestamo> = emptyList(),
     val equipoSeleccionado: Equipo? = null,
     val formulario: FormularioSolicitudState = FormularioSolicitudState(),
+    val formularioEquipo: FormularioEquipoState = FormularioEquipoState(),
     val mensajeExito: String? = null,
     val mensajeError: String? = null,
     val estaCargando: Boolean = false
