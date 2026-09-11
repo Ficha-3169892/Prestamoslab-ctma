@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import com.example.prestamolabctma.model.CategoriaEquipo
 import com.example.prestamolabctma.model.Equipo
 import com.example.prestamolabctma.model.EstadoEquipo
@@ -37,14 +39,16 @@ fun CatalogoScreen(
     onNombreNuevoChanged: (String) -> Unit,
     onCategoriaNuevaChanged: (CategoriaEquipo) -> Unit,
     onAgregarEquipo: () -> Unit,
-    onQueryChanged: (String) -> Unit
+    onQueryChanged: (String) -> Unit,
+    onCategoriaFilterChanged: (CategoriaEquipo?) -> Unit
 ) {
-    val equiposFiltrados = remember(uiState.equipos, uiState.queryBusqueda) {
-        if (uiState.queryBusqueda.isBlank()) {
-            uiState.equipos
-        } else {
-            val queryNormalizada = uiState.queryBusqueda.trim().lowercase()
-            uiState.equipos.filter { it.nombre.lowercase().contains(queryNormalizada) }
+    val equiposFiltrados = remember(uiState.equipos, uiState.queryBusqueda, uiState.categoriaSeleccionada) {
+        uiState.equipos.filter { equipo ->
+            val matchesQuery = uiState.queryBusqueda.isBlank() || 
+                    equipo.nombre.lowercase().contains(uiState.queryBusqueda.trim().lowercase())
+            val matchesCategory = uiState.categoriaSeleccionada == null || 
+                    equipo.categoria == uiState.categoriaSeleccionada
+            matchesQuery && matchesCategory
         }
     }
 
@@ -108,6 +112,12 @@ fun CatalogoScreen(
                     focusedBorderColor = TechPrimary,
                     unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
                 )
+            )
+
+            // Filtro de Categorías
+            CategoryFilterRow(
+                selectedCategory = uiState.categoriaSeleccionada,
+                onCategorySelected = onCategoriaFilterChanged
             )
 
             Text(
@@ -395,4 +405,42 @@ fun NuevoEquipoDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryFilterRow(
+    selectedCategory: CategoriaEquipo?,
+    onCategorySelected: (CategoriaEquipo?) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            FilterChip(
+                selected = selectedCategory == null,
+                onClick = { onCategorySelected(null) },
+                label = { Text("Todas") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = TechPrimary,
+                    selectedLabelColor = Color.White
+                )
+            )
+        }
+        items(CategoriaEquipo.entries) { categoria ->
+            FilterChip(
+                selected = selectedCategory == categoria,
+                onClick = { onCategorySelected(categoria) },
+                label = { Text(categoria.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = TechPrimary,
+                    selectedLabelColor = Color.White
+                )
+            )
+        }
+    }
 }

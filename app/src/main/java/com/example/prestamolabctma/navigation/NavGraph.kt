@@ -133,7 +133,8 @@ fun AppNavigation(viewModel: PrestamoViewModel) {
                     onNombreNuevoChanged = { viewModel.onNombreEquipoChanged(it) },
                     onCategoriaNuevaChanged = { viewModel.onCategoriaEquipoChanged(it) },
                     onAgregarEquipo = { viewModel.agregarEquipo() },
-                    onQueryChanged = { viewModel.onQueryBusquedaChanged(it) }
+                    onQueryChanged = { viewModel.onQueryBusquedaChanged(it) },
+                    onCategoriaFilterChanged = { viewModel.onCategoriaSelected(it) }
                 )
             }
             composable("detalle") {

@@ -209,6 +209,10 @@ class PrestamoViewModel(
         _uiState.update { it.copy(queryBusqueda = nuevaQuery) }
     }
 
+    fun onCategoriaSelected(categoria: CategoriaEquipo?) {
+        _uiState.update { it.copy(categoriaSeleccionada = categoria) }
+    }
+
     // --- Nuevas funcionalidades para Equipos ---
 
     fun toggleEstadoEquipo(equipoId: Int) {
