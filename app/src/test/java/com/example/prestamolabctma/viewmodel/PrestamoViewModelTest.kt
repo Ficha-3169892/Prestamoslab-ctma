@@ -323,7 +323,7 @@ class PrestamoViewModelTest {
     }
 
     @Test
-    fun `CP - 02 - Duracion negativa`() = runTest {
+    fun `HU 6 CP - 02 - Duracion negativa`() = runTest {
         viewModel.onDuracionChanged("-1")
         assertEquals("La duración debe ser mayor a 0", viewModel.uiState.value.formulario.errorDuracion)
         assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
