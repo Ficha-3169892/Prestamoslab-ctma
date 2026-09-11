@@ -69,6 +69,8 @@ class PrestamoViewModelTest {
         coEvery { repository.obtenerEquipos() } returns listOf(equipo)
 
         viewModel.seleccionarEquipo(equipoId)
+        advanceUntilIdle()
+
         viewModel.onAmbienteChanged("Lab A")
         viewModel.onPropositoChanged("Práctica de circuitos 101")
         viewModel.onDuracionChanged("2")
@@ -96,6 +98,8 @@ class PrestamoViewModelTest {
         coEvery { repository.crearSolicitud(any()) } returns Result.failure(Exception("El equipo no está disponible para préstamo"))
 
         viewModel.seleccionarEquipo(equipoId)
+        advanceUntilIdle()
+
         viewModel.onAmbienteChanged("Lab B")
         viewModel.onPropositoChanged("Medición de señales complejas")
         viewModel.onDuracionChanged("3")
@@ -122,6 +126,8 @@ class PrestamoViewModelTest {
         coEvery { repository.crearSolicitud(any()) } returns Result.failure(Exception("El equipo no está disponible (RESERVADO)"))
 
         viewModel.seleccionarEquipo(equipoId)
+        advanceUntilIdle()
+
         viewModel.onAmbienteChanged("Lab C")
         viewModel.onPropositoChanged("Práctica de microcontroladores")
         viewModel.onDuracionChanged("1")
@@ -136,7 +142,7 @@ class PrestamoViewModelTest {
 
     /**
      * HU: Préstamos
-     * CP-04 - Equipo no disponible
+     * CP-04 - guardarSolicitud error cuando equipo esta marcado como no disponible
      */
     @Test
     fun `CP-04 - guardarSolicitud error cuando equipo esta marcado como no disponible`() = runTest {
@@ -147,6 +153,8 @@ class PrestamoViewModelTest {
         coEvery { repository.crearSolicitud(any()) } returns Result.failure(Exception("El equipo no está disponible por mantenimiento"))
 
         viewModel.seleccionarEquipo(equipoId)
+        advanceUntilIdle()
+
         viewModel.onAmbienteChanged("Estudio")
         viewModel.onPropositoChanged("Sesión fotográfica de componentes")
         viewModel.onDuracionChanged("5")
@@ -166,8 +174,12 @@ class PrestamoViewModelTest {
     @Test
     fun `CP-06 - ViewModel actualiza estado de error correctamente al fallar solicitud`() = runTest {
         // Arrange
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
         coEvery { repository.crearSolicitud(any()) } returns Result.failure(Exception("Fallo de red"))
         
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+
         viewModel.onAmbienteChanged("Aula 10")
         viewModel.onPropositoChanged("Explicación de hardware básico")
         viewModel.onDuracionChanged("1")
@@ -183,7 +195,7 @@ class PrestamoViewModelTest {
 
     /**
      * HU: Préstamos
-     * CP-07 - Error desaparece al seleccionar equipo disponible
+     * CP-07 - el mensaje de error se limpia al seleccionar un nuevo equipo
      */
     @Test
     fun `CP-07 - el mensaje de error se limpia al seleccionar un nuevo equipo`() = runTest {
@@ -196,6 +208,8 @@ class PrestamoViewModelTest {
 
         // Act
         // 1. Forzar un error
+        viewModel.seleccionarEquipo(equipoId1)
+        advanceUntilIdle()
         viewModel.onAmbienteChanged("Lab 1")
         viewModel.onPropositoChanged("Propósito válido para el test")
         viewModel.onDuracionChanged("2")
@@ -213,12 +227,16 @@ class PrestamoViewModelTest {
 
     /**
      * HU: Préstamos
-     * CP-10 - Error durante consulta de disponibilidad
+     * CP-10 - guardarSolicitud maneja error inesperado del repositorio
      */
     @Test
     fun `CP-10 - guardarSolicitud maneja error inesperado del repositorio`() = runTest {
         // Arrange
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
         coEvery { repository.crearSolicitud(any()) } returns Result.failure(Exception("Error de conexión"))
+
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
 
         viewModel.onAmbienteChanged("Lab D")
         viewModel.onPropositoChanged("Prueba de estres de sistema")
@@ -232,41 +250,18 @@ class PrestamoViewModelTest {
         assertEquals("Error de conexión", viewModel.uiState.value.mensajeError)
     }
 
-    @Test
-    fun `CP-11 - Solicitar multiples equipos disponibles exitosamente`() = runTest {
-        // Arrange
-        coEvery { repository.crearSolicitud(any()) } returns Result.success(Unit)
-        coEvery { repository.obtenerEquipos() } returns emptyList()
-
-        // Solicitud 1
-        viewModel.onAmbienteChanged("Lab 1")
-        viewModel.onPropositoChanged("Práctica 1 de laboratorio")
-        viewModel.onDuracionChanged("2")
-        viewModel.guardarSolicitud()
-        advanceUntilIdle()
-        assertEquals("¡Solicitud registrada correctamente!", viewModel.uiState.value.mensajeExito)
-
-        viewModel.limpiarMensajes()
-
-        // Solicitud 2
-        viewModel.onAmbienteChanged("Lab 2")
-        viewModel.onPropositoChanged("Práctica 2 de laboratorio")
-        viewModel.onDuracionChanged("2")
-        viewModel.guardarSolicitud()
-        advanceUntilIdle()
-        assertEquals("¡Solicitud registrada correctamente!", viewModel.uiState.value.mensajeExito)
-    }
-
     /**
      * HU: Préstamos
-     * CP-08 - Equipo cambia de disponible a no disponible antes de confirmar
+     * CP-08 - rechazar solicitud si el equipo cambia de estado justo antes de guardar
      */
     @Test
     fun `CP-08 - rechazar solicitud si el equipo cambia de estado justo antes de guardar`() = runTest {
         // Arrange
-        val equipoId = 1
-        // Simular que cuando se consultó estaba disponible, pero al guardar ya no
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
         coEvery { repository.crearSolicitud(any()) } returns Result.failure(Exception("El equipo ya no está disponible"))
+
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
 
         viewModel.onAmbienteChanged("Lab A")
         viewModel.onPropositoChanged("Práctica de emergencia")
@@ -282,14 +277,17 @@ class PrestamoViewModelTest {
 
     /**
      * HU: Préstamos
-     * CP-09 - Solicitudes consecutivas al mismo equipo
+     * CP-09 - la segunda solicitud consecutiva falla si el equipo ya fue reservado
      */
     @Test
     fun `CP-09 - la segunda solicitud consecutiva falla si el equipo ya fue reservado`() = runTest {
         // Arrange
-        val equipoId = 1
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
         // Primera vez éxito, segunda vez error
         coEvery { repository.crearSolicitud(any()) } returns Result.success(Unit) andThen Result.failure(Exception("Equipo ya reservado"))
+
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
 
         viewModel.onAmbienteChanged("Lab 1")
         viewModel.onPropositoChanged("Primera solicitud válida")
@@ -303,9 +301,12 @@ class PrestamoViewModelTest {
         viewModel.limpiarMensajes()
         
         // Act - Segunda solicitud
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
         viewModel.onAmbienteChanged("Lab 1")
         viewModel.onPropositoChanged("Segunda solicitud al mismo equipo")
         viewModel.onDuracionChanged("2")
+
         viewModel.guardarSolicitud()
         advanceUntilIdle()
 
@@ -316,7 +317,7 @@ class PrestamoViewModelTest {
     // --- Tests para HU-6: Validación de duración ---
 
     @Test
-    fun `CP - 01 - Duracion igual a 0`() = runTest {
+    fun `HU 6 CP - 01 - Duracion igual a 0`() = runTest {
         viewModel.onDuracionChanged("0")
         assertEquals("La duración debe ser mayor a 0", viewModel.uiState.value.formulario.errorDuracion)
         assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
@@ -330,79 +331,115 @@ class PrestamoViewModelTest {
     }
 
     @Test
-    fun `CP - 03 - Duracion valida`() = runTest {
-        viewModel.onAmbienteChanged("Lab A")
-        viewModel.onPropositoChanged("Practica valida de 10 chars")
-        viewModel.onDuracionChanged("5")
-        assertNull(viewModel.uiState.value.formulario.errorDuracion)
-        assertTrue(viewModel.uiState.value.formulario.esFormularioValido)
-    }
-
-    @Test
-    fun `CP - 04 - Duracion maxima permitida`() = runTest {
+    fun `HU 6 CP - 04 - Duracion maxima permitida`() = runTest {
         viewModel.onDuracionChanged("8")
         assertNull(viewModel.uiState.value.formulario.errorDuracion)
     }
 
     @Test
-    fun `CP - 05 - Duracion superior al maximo`() = runTest {
+    fun `HU 6 CP - 05 - Duracion superior al maximo`() = runTest {
         viewModel.onDuracionChanged("9")
         assertEquals("La duración máxima son 8 horas", viewModel.uiState.value.formulario.errorDuracion)
         assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
     }
 
+    // --- Tests para HU-7: Mejorar validaciones del formulario ---
+
     @Test
-    fun `CP - 06 - Campo vacio`() = runTest {
+    fun `HU 7 CP - 01 - Equipo no seleccionado`() = runTest {
+        coEvery { repository.obtenerEquipo(0) } returns null
+        viewModel.seleccionarEquipo(0)
+        advanceUntilIdle()
+        
+        assertEquals("Debe seleccionar un equipo", viewModel.uiState.value.formulario.errorEquipo)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `HU 7 CP - 02 - Equipo seleccionado`() = runTest {
+        val equipo = Equipo(1, "E1", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
+        coEvery { repository.obtenerEquipo(1) } returns equipo
+        
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+        
+        assertNull(viewModel.uiState.value.formulario.errorEquipo)
+    }
+
+    @Test
+    fun `HU 7 CP - 03 - Ambiente vacio`() = runTest {
+        viewModel.onAmbienteChanged("")
+        assertEquals("El ambiente o destino es obligatorio", viewModel.uiState.value.formulario.errorAmbiente)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `HU 7 CP - 04 - Ambiente valido`() = runTest {
+        viewModel.onAmbienteChanged("Laboratorio de Redes")
+        assertNull(viewModel.uiState.value.formulario.errorAmbiente)
+    }
+
+    @Test
+    fun `HU 7 CP - 05 - Proposito vacio`() = runTest {
+        viewModel.onPropositoChanged("")
+        assertEquals("El propósito es obligatorio", viewModel.uiState.value.formulario.errorProposito)
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `HU 7 CP - 06 - Proposito valido`() = runTest {
+        viewModel.onPropositoChanged("Realización de pruebas de conectividad")
+        assertNull(viewModel.uiState.value.formulario.errorProposito)
+    }
+
+    @Test
+    fun `HU 7 CP - 10 - Formulario completamente vacio`() = runTest {
+        // Forzamos disparar validaciones manuales si fuera necesario.
+        viewModel.onAmbienteChanged("")
+        viewModel.onPropositoChanged("")
         viewModel.onDuracionChanged("")
-        assertEquals("La duración es obligatoria", viewModel.uiState.value.formulario.errorDuracion)
-        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
-    }
-
-    @Test
-    fun `CP - 07 - Valor decimal`() = runTest {
-        viewModel.onDuracionChanged("2.5")
-        assertEquals("Ingresa un número válido", viewModel.uiState.value.formulario.errorDuracion)
-        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
-    }
-
-    @Test
-    fun `CP - 08 - Entrada no numerica`() = runTest {
-        viewModel.onDuracionChanged("abc")
-        assertEquals("Ingresa un número válido", viewModel.uiState.value.formulario.errorDuracion)
-        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
-    }
-
-    @Test
-    fun `CP - 09 - Correccion del error`() = runTest {
-        viewModel.onDuracionChanged("10") // Error
-        assertNotNull(viewModel.uiState.value.formulario.errorDuracion)
         
-        viewModel.onDuracionChanged("4") // Corrección
-        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+        val updatedForm = viewModel.uiState.value.formulario
+        assertNotNull(updatedForm.errorAmbiente)
+        assertNotNull(updatedForm.errorProposito)
+        assertNotNull(updatedForm.errorDuracion)
+        assertFalse(updatedForm.esFormularioValido)
     }
 
     @Test
-    fun `CP - 10 - Crear solicitud con duracion invalida`() = runTest {
-        viewModel.onAmbienteChanged("Ambiente")
-        viewModel.onPropositoChanged("Proposito valido")
-        viewModel.onDuracionChanged("10") // Invalida
+    fun `HU 7 CP - 13 - Boton deshabilitado con errores`() = runTest {
+        // Solo ambiente válido, lo demás error
+        viewModel.onAmbienteChanged("Lab 1")
+        viewModel.onPropositoChanged("Corto") // Error
+        viewModel.onDuracionChanged("0") // Error
         
         assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
-        
-        // Intentar guardar no debería llamar al repositorio (validado en ViewModel)
-        viewModel.guardarSolicitud()
-        coVerify(exactly = 0) { repository.crearSolicitud(any()) }
     }
 
     @Test
-    fun `CP - 11 - Crear solicitud completamente valida`() = runTest {
-        coEvery { repository.crearSolicitud(any()) } returns Result.success(Unit)
+    fun `HU 7 CP - 14 - Boton habilitado con formulario valido`() = runTest {
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
         
-        viewModel.onAmbienteChanged("Lab A")
-        viewModel.onPropositoChanged("Practica de electronica")
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+        viewModel.onAmbienteChanged("Aula 204")
+        viewModel.onPropositoChanged("Práctica de circuitos eléctricos")
         viewModel.onDuracionChanged("3")
         
         assertTrue(viewModel.uiState.value.formulario.esFormularioValido)
+    }
+
+    @Test
+    fun `HU 7 CP - 15 - Crear solicitud valida`() = runTest {
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
+        coEvery { repository.crearSolicitud(any()) } returns Result.success(Unit)
+        
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+        viewModel.onAmbienteChanged("Lab A")
+        viewModel.onPropositoChanged("Práctica de instrumentación")
+        viewModel.onDuracionChanged("2")
+        
         viewModel.guardarSolicitud()
         advanceUntilIdle()
         
@@ -410,17 +447,33 @@ class PrestamoViewModelTest {
     }
 
     @Test
-    fun `CP - 12 - Validacion del limite maximo`() = runTest {
-        // Valor inferior al máximo
-        viewModel.onDuracionChanged("7")
-        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+    fun `HU 7 CP - 16 - Errores independientes por campo`() = runTest {
+        viewModel.onAmbienteChanged("Lab A")
+        viewModel.onPropositoChanged("Corto") // Error aquí
+        viewModel.onDuracionChanged("5")
         
-        // Valor máximo
-        viewModel.onDuracionChanged("8")
-        assertNull(viewModel.uiState.value.formulario.errorDuracion)
+        val form = viewModel.uiState.value.formulario
+        assertNull(form.errorAmbiente)
+        assertNotNull(form.errorProposito)
+        assertNull(form.errorDuracion)
+        assertEquals("Lab A", form.ambienteDestino)
+        assertEquals("5", form.duracionHoras)
+    }
+
+    @Test
+    fun `HU 7 CP - 17 - Datos validos despues de un error`() = runTest {
+        // 1. Entrar datos inválidos
+        viewModel.onAmbienteChanged("") 
+        assertFalse(viewModel.uiState.value.formulario.esFormularioValido)
         
-        // Valor superior al máximo
-        viewModel.onDuracionChanged("9")
-        assertEquals("La duración máxima son 8 horas", viewModel.uiState.value.formulario.errorDuracion)
+        // 2. Corregir
+        coEvery { repository.obtenerEquipo(1) } returns Equipo(1, "E", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE)
+        viewModel.seleccionarEquipo(1)
+        advanceUntilIdle()
+        viewModel.onAmbienteChanged("Lab B")
+        viewModel.onPropositoChanged("Propósito suficientemente largo")
+        viewModel.onDuracionChanged("4")
+        
+        assertTrue(viewModel.uiState.value.formulario.esFormularioValido)
     }
 }

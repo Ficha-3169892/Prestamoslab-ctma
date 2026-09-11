@@ -17,6 +17,7 @@ data class FormularioSolicitudState(
     val ambienteDestino: String = "",
     val proposito: String = "",
     val duracionHoras: String = "1",
+    val errorEquipo: String? = null,
     val errorAmbiente: String? = null,
     val errorProposito: String? = null,
     val errorDuracion: String? = null,
