@@ -9,10 +9,11 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         Equipo(2, "Kit de Electrónica Arduino", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
         Equipo(3, "Osciloscopio Portátil", CategoriaEquipo.MEDICION, EstadoEquipo.DISPONIBLE),
         Equipo(4, "Cámara Fotográfica Sony", CategoriaEquipo.PERIFERICOS, EstadoEquipo.PRESTADO),
-        Equipo(5, "Tableta Gráfica Wacom", CategoriaEquipo.COMPUTO, EstadoEquipo.DISPONIBLE)
+        Equipo(5, "Tableta Gráfica Wacom", CategoriaEquipo.COMPUTO, EstadoEquipo.DISPONIBLE),
+        Equipo(6, "Generador de Funciones", CategoriaEquipo.MEDICION, EstadoEquipo.NO_DISPONIBLE)
     )
 
-    private var siguienteEquipoId = 6
+    private var siguienteEquipoId = 7
     private val solicitudes = mutableListOf<SolicitudPrestamo>()
     private var siguienteSolicitudId = 1
 

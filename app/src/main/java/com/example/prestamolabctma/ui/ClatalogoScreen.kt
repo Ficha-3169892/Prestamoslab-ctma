@@ -270,6 +270,7 @@ fun BadgeEstadoModern(estado: EstadoEquipo) {
         EstadoEquipo.DISPONIBLE -> StatusGreenVibrant to "Disponible"
         EstadoEquipo.RESERVADO -> StatusOrangeVibrant to "Reservado"
         EstadoEquipo.PRESTADO -> StatusRedVibrant to "Prestado"
+        EstadoEquipo.NO_DISPONIBLE -> Color.Gray to "No Disponible"
     }
 
     Surface(

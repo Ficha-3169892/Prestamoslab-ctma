@@ -43,7 +43,8 @@ class PrestamoViewModel(
             _uiState.update {
                 it.copy(
                     equipoSeleccionado = equipo,
-                    formulario = FormularioSolicitudState(equipoId = equipoId)
+                    formulario = FormularioSolicitudState(equipoId = equipoId),
+                    mensajeError = null // CP-07: Limpiar error previo al seleccionar nuevo equipo
                 )
             }
         }
