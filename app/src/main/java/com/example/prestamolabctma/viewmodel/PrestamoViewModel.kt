@@ -79,10 +79,21 @@ class PrestamoViewModel(
     }
 
     fun onDuracionChanged(nuevaDuracion: String) {
+        if (nuevaDuracion.isBlank()) {
+            _uiState.update { estado ->
+                val form = estado.formulario.copy(
+                    duracionHoras = nuevaDuracion,
+                    errorDuracion = "La duración es obligatoria"
+                )
+                estado.copy(formulario = form.copy(esFormularioValido = false))
+            }
+            return
+        }
+
         val duracionNum = nuevaDuracion.toIntOrNull()
         val error = when {
             duracionNum == null -> "Ingresa un número válido"
-            duracionNum < 1 -> "La duración mínima es 1 hora"
+            duracionNum <= 0 -> "La duración debe ser mayor a 0"
             duracionNum > 8 -> "La duración máxima son 8 horas"
             else -> null
         }
