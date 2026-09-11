@@ -480,13 +480,13 @@ class PrestamoViewModelTest {
     // --- Tests para HU-8: Búsqueda de equipos ---
 
     @Test
-    fun `CP - 07 - Busqueda vacia`() = runTest {
+    fun `HU 8 CP - 07 - Busqueda vacia`() = runTest {
         viewModel.onQueryBusquedaChanged("")
         assertEquals("", viewModel.uiState.value.queryBusqueda)
     }
 
     @Test
-    fun `CP - 08 - Limpiar busqueda`() = runTest {
+    fun `HU 8 CP - 08 - Limpiar busqueda`() = runTest {
         viewModel.onQueryBusquedaChanged("Multímetro")
         assertEquals("Multímetro", viewModel.uiState.value.queryBusqueda)
         
@@ -495,11 +495,54 @@ class PrestamoViewModelTest {
     }
 
     @Test
-    fun `CP - 09 - Modificar busqueda`() = runTest {
+    fun `HU 8 CP - 09 - Modificar busqueda`() = runTest {
         viewModel.onQueryBusquedaChanged("Arduino")
         assertEquals("Arduino", viewModel.uiState.value.queryBusqueda)
         
         viewModel.onQueryBusquedaChanged("Cámara")
         assertEquals("Cámara", viewModel.uiState.value.queryBusqueda)
+    }
+
+    // --- Tests para HU-9: Filtro por categoría ---
+
+    @Test
+    fun `CP - 01 - Cargar categorias`() = runTest {
+        assertNull(viewModel.uiState.value.categoriaSeleccionada)
+    }
+
+    @Test
+    fun `CP - 02 - Seleccionar una categoria`() = runTest {
+        viewModel.onCategoriaSelected(CategoriaEquipo.MEDICION)
+        assertEquals(CategoriaEquipo.MEDICION, viewModel.uiState.value.categoriaSeleccionada)
+    }
+
+    @Test
+    fun `CP - 04 - Cambiar de categoria`() = runTest {
+        viewModel.onCategoriaSelected(CategoriaEquipo.MEDICION)
+        assertEquals(CategoriaEquipo.MEDICION, viewModel.uiState.value.categoriaSeleccionada)
+        
+        viewModel.onCategoriaSelected(CategoriaEquipo.ELECTRONICA)
+        assertEquals(CategoriaEquipo.ELECTRONICA, viewModel.uiState.value.categoriaSeleccionada)
+    }
+
+    @Test
+    fun `CP - 05 - Seleccionar Todas`() = runTest {
+        viewModel.onCategoriaSelected(CategoriaEquipo.MEDICION)
+        assertNotNull(viewModel.uiState.value.categoriaSeleccionada)
+        
+        viewModel.onCategoriaSelected(null)
+        assertNull(viewModel.uiState.value.categoriaSeleccionada)
+    }
+
+    @Test
+    fun `CP - 10 - Cambio consecutivo de filtros`() = runTest {
+        viewModel.onCategoriaSelected(CategoriaEquipo.COMPUTO)
+        assertEquals(CategoriaEquipo.COMPUTO, viewModel.uiState.value.categoriaSeleccionada)
+        
+        viewModel.onCategoriaSelected(CategoriaEquipo.PERIFERICOS)
+        assertEquals(CategoriaEquipo.PERIFERICOS, viewModel.uiState.value.categoriaSeleccionada)
+        
+        viewModel.onCategoriaSelected(null)
+        assertNull(viewModel.uiState.value.categoriaSeleccionada)
     }
 }
