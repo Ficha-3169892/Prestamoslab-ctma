@@ -60,6 +60,14 @@ fun SolicitudFormScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            if (form.errorEquipo != null) {
+                Text(
+                    text = form.errorEquipo,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
             if (equipo != null) {
                 // Info Card del Equipo
                 Card(

@@ -40,11 +40,13 @@ class PrestamoViewModel(
     fun seleccionarEquipo(equipoId: Int) {
         viewModelScope.launch {
             val equipo = repository.obtenerEquipo(equipoId)
-            _uiState.update {
-                it.copy(
+            val error = if (equipoId == 0) "Debe seleccionar un equipo" else null
+            _uiState.update { estado ->
+                val form = FormularioSolicitudState(equipoId = equipoId, errorEquipo = error)
+                estado.copy(
                     equipoSeleccionado = equipo,
-                    formulario = FormularioSolicitudState(equipoId = equipoId),
-                    mensajeError = null // CP-07: Limpiar error previo al seleccionar nuevo equipo
+                    formulario = form.copy(esFormularioValido = validarFormularioCompleto(form)),
+                    mensajeError = null
                 )
             }
         }
@@ -79,19 +81,9 @@ class PrestamoViewModel(
     }
 
     fun onDuracionChanged(nuevaDuracion: String) {
-        if (nuevaDuracion.isBlank()) {
-            _uiState.update { estado ->
-                val form = estado.formulario.copy(
-                    duracionHoras = nuevaDuracion,
-                    errorDuracion = "La duración es obligatoria"
-                )
-                estado.copy(formulario = form.copy(esFormularioValido = false))
-            }
-            return
-        }
-
         val duracionNum = nuevaDuracion.toIntOrNull()
         val error = when {
+            nuevaDuracion.isBlank() -> "La duración es obligatoria"
             duracionNum == null -> "Ingresa un número válido"
             duracionNum <= 0 -> "La duración debe ser mayor a 0"
             duracionNum > 8 -> "La duración máxima son 8 horas"
@@ -108,7 +100,8 @@ class PrestamoViewModel(
 
     private fun validarFormularioCompleto(form: FormularioSolicitudState): Boolean {
         val duracionNum = form.duracionHoras.toIntOrNull()
-        return form.ambienteDestino.isNotBlank() &&
+        return form.equipoId != 0 &&
+                form.ambienteDestino.isNotBlank() &&
                 form.proposito.length in 10..180 &&
                 duracionNum != null && duracionNum in 1..8
     }
