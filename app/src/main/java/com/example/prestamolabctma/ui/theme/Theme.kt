@@ -6,31 +6,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
-private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
-    onPrimary = SurfaceWhite,
-    primaryContainer = PrimaryBlueLight,
-    onPrimaryContainer = PrimaryBlue,
-    secondary = AccentGreen,
-    onSecondary = SurfaceWhite,
-    secondaryContainer = AccentGreenLight,
-    onSecondaryContainer = StatusGreen,
-    background = BackgroundSlate,
-    surface = SurfaceWhite,
+private val TechColorPalette = lightColorScheme(
+    primary = TechPrimary,
+    onPrimary = Color.White,
+    primaryContainer = TechPrimary.copy(alpha = 0.1f),
+    onPrimaryContainer = TechPrimary,
+    secondary = TechSecondary,
+    onSecondary = Color.White,
+    background = TechBackground,
+    surface = TechSurface,
     onSurface = TextDark,
     onBackground = TextDark,
-    outline = TextGray.copy(alpha = 0.2f)
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
-    secondary = AccentGreen,
-    tertiary = Pink80
+    outline = Color(0xFFE9ECEF)
 )
 
 val Shapes = Shapes(
@@ -44,14 +37,14 @@ fun PrestamoLabCTMATheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = TechColorPalette
     val view = LocalView.current
     
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.statusBarColor = TechPrimary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 

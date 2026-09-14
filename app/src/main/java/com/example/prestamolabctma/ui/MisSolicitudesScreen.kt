@@ -7,17 +7,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.prestamolabctma.model.EstadoSolicitud
 import com.example.prestamolabctma.ui.theme.*
 import com.example.prestamolabctma.viewmodel.PrestamoUiState
@@ -27,14 +26,23 @@ import com.example.prestamolabctma.viewmodel.PrestamoUiState
 fun MisSolicitudesScreen(
     uiState: PrestamoUiState,
     onCancelarSolicitud: (Int) -> Unit,
+    onAprobarSolicitud: (Int) -> Unit,
+    onRechazarSolicitud: (Int) -> Unit,
+    onFinalizarPrestamo: (Int) -> Unit,
     onVolver: () -> Unit
 ) {
+    var solicitudACancelar by remember { mutableStateOf<Int?>(null) }
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = TechBackground,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                title = { Text("Mis Solicitudes", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = TechPrimary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
+                title = { Text("Gestión de Solicitudes", fontWeight = FontWeight.Black) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -50,14 +58,51 @@ fun MisSolicitudesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
             ) {
                 items(uiState.solicitudes) { solicitud ->
-                    SolicitudModernItem(solicitud, onCancelarSolicitud)
+                    val equipo = uiState.equipos.find { it.id == solicitud.equipoId }
+                    val nombreEquipo = equipo?.nombre ?: "Equipo desconocido"
+                    
+                    SolicitudModernItem(
+                        solicitud = solicitud,
+                        nombreEquipo = nombreEquipo,
+                        onCancelarClick = { solicitudACancelar = it },
+                        onAprobarSolicitud = onAprobarSolicitud,
+                        onRechazarSolicitud = onRechazarSolicitud,
+                        onFinalizarPrestamo = onFinalizarPrestamo
+                    )
                 }
             }
+        }
+
+        // Dialogo de Confirmación
+        solicitudACancelar?.let { id ->
+            AlertDialog(
+                onDismissRequest = { solicitudACancelar = null },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onCancelarSolicitud(id)
+                            solicitudACancelar = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusRedVibrant)
+                    ) {
+                        Text("Confirmar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { solicitudACancelar = null }) {
+                        Text("Cancelar")
+                    }
+                },
+                title = { Text("¿Cancelar solicitud?") },
+                text = { Text("Esta acción no se puede deshacer y el equipo volverá a estar disponible.") },
+                shape = RoundedCornerShape(20.dp),
+                containerColor = Color.White
+            )
         }
     }
 }
@@ -65,54 +110,97 @@ fun MisSolicitudesScreen(
 @Composable
 fun SolicitudModernItem(
     solicitud: com.example.prestamolabctma.model.SolicitudPrestamo,
-    onCancelarSolicitud: (Int) -> Unit
+    nombreEquipo: String,
+    onCancelarClick: (Int) -> Unit,
+    onAprobarSolicitud: (Int) -> Unit,
+    onRechazarSolicitud: (Int) -> Unit,
+    onFinalizarPrestamo: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(1.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Solicitud #${solicitud.id}",
+                        text = nombreEquipo,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Black,
+                        color = TechPrimary
                     )
                     Text(
-                        solicitud.ambienteDestino,
-                        style = MaterialTheme.typography.bodyMedium
+                        "Solicitud #${solicitud.id} • ${solicitud.ambienteDestino}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray
                     )
                 }
                 BadgeEstadoSolicitud(solicitud.estado)
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = 16.dp),
-                color = MaterialTheme.colorScheme.outline
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = Color.LightGray.copy(alpha = 0.3f)
             )
 
             DetailRow("Propósito", solicitud.proposito)
-            DetailRow("Duración", "${solicitud.duracionHoras} horas")
+            DetailRow("Duración", "${solicitud.duracionHoras} horas de préstamo")
 
             if (solicitud.estado == EstadoSolicitud.SOLICITADA) {
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { onCancelarSolicitud(solicitud.id) },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(StatusRed))
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Button(
+                        onClick = { onAprobarSolicitud(solicitud.id) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusGreenVibrant),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("APROBAR", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                    
+                    Button(
+                        onClick = { onRechazarSolicitud(solicitud.id) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusRedVibrant),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("RECHAZAR", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                }
+                
+                TextButton(
+                    onClick = { onCancelarClick(solicitud.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = TextGray)
+                ) {
+                    Text("Cancelar Solicitud", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            
+            if (solicitud.estado == EstadoSolicitud.APROBADA) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { onFinalizarPrestamo(solicitud.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = TechPrimary),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.AssignmentReturn, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cancelar Solicitud", fontWeight = FontWeight.Bold)
+                    Text("MARCAR COMO DEVUELTO", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -126,34 +214,37 @@ fun DetailRow(label: String, value: String) {
             "$label: ",
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
-            color = TextGray
+            color = TextDark
         )
         Text(
             value,
             style = MaterialTheme.typography.bodySmall,
-            color = TextDark
+            color = TextGray
         )
     }
 }
 
 @Composable
 fun BadgeEstadoSolicitud(estado: EstadoSolicitud) {
-    val color = when (estado) {
-        EstadoSolicitud.SOLICITADA -> PrimaryBlue
-        EstadoSolicitud.APROBADA -> StatusGreen
-        EstadoSolicitud.CANCELADA, EstadoSolicitud.RECHAZADA -> StatusRed
-        else -> StatusOrange
+    val (color, label) = when (estado) {
+        EstadoSolicitud.SOLICITADA -> TechPrimary to "Pendiente"
+        EstadoSolicitud.APROBADA -> StatusGreenVibrant to "Activo"
+        EstadoSolicitud.RECHAZADA -> StatusRedVibrant to "Rechazado"
+        EstadoSolicitud.CANCELADA -> Color.Gray to "Cancelado"
+        EstadoSolicitud.DEVUELTA -> Color.DarkGray to "Devuelto"
+        else -> StatusOrangeVibrant to estado.name
     }
     Surface(
         color = color.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(6.dp)
     ) {
         Text(
-            text = estado.name,
+            text = label.uppercase(),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = color
+            fontWeight = FontWeight.Black,
+            color = color,
+            fontSize = 9.sp
         )
     }
 }
@@ -169,7 +260,7 @@ fun EmptySolicitudes(modifier: Modifier = Modifier) {
             imageVector = Icons.Default.ReceiptLong,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = TextGray.copy(alpha = 0.3f)
+            tint = TechPrimary.copy(alpha = 0.1f)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(

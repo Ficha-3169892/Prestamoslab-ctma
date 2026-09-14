@@ -18,9 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.prestamolabctma.model.EstadoEquipo
-import com.example.prestamolabctma.ui.theme.AccentGreen
-import com.example.prestamolabctma.ui.theme.PrimaryBlue
+import com.example.prestamolabctma.ui.theme.*
 import com.example.prestamolabctma.viewmodel.PrestamoViewModel
 import com.example.prestamolabctma.viewmodel.PrestamoUiState
 
@@ -35,11 +35,15 @@ fun SolicitudFormScreen(
     val form = uiState.formulario
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = TechBackground,
         topBar = {
             CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-                title = { Text("Nueva Solicitud", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = TechPrimary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                ),
+                title = { Text("Nueva Solicitud", fontWeight = FontWeight.Black) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -56,10 +60,18 @@ fun SolicitudFormScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            if (form.errorEquipo != null) {
+                Text(
+                    text = form.errorEquipo,
+                    color = StatusRedVibrant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
             if (equipo != null) {
                 // Info Card del Equipo
                 Card(
-                    shape = MaterialTheme.shapes.large,
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
@@ -69,16 +81,22 @@ fun SolicitudFormScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                .size(60.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(TechPrimary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryBlue)
+                            Icon(Icons.Default.Info, contentDescription = null, tint = TechPrimary, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text(equipo.nombre, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                equipo.nombre, 
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                color = TechPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             BadgeEstadoModern(estado = equipo.estado)
                         }
                     }
@@ -87,12 +105,13 @@ fun SolicitudFormScreen(
                 if (equipo.estado != EstadoEquipo.DISPONIBLE) {
                     AlertNoDisponible()
                 } else {
-                    Text("Detalles del Préstamo", style = MaterialTheme.typography.titleMedium)
+                    Text("Detalles del Préstamo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
                     ModernTextField(
                         value = form.ambienteDestino,
                         onValueChange = { viewModel.onAmbienteChanged(it) },
                         label = "Ambiente / Destino",
+                        placeholder = "Ej. Aula 204",
                         error = form.errorAmbiente
                     )
 
@@ -100,6 +119,7 @@ fun SolicitudFormScreen(
                         value = form.proposito,
                         onValueChange = { viewModel.onPropositoChanged(it) },
                         label = "Propósito",
+                        placeholder = "Motivo del préstamo",
                         error = form.errorProposito
                     )
 
@@ -107,6 +127,7 @@ fun SolicitudFormScreen(
                         value = form.duracionHoras,
                         onValueChange = { viewModel.onDuracionChanged(it) },
                         label = "Duración (Horas)",
+                        placeholder = "1",
                         error = form.errorDuracion
                     )
 
@@ -120,16 +141,16 @@ fun SolicitudFormScreen(
                         enabled = form.esFormularioValido,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        shape = CircleShape,
+                            .height(60.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentGreen,
-                            disabledContainerColor = AccentGreen.copy(alpha = 0.3f)
+                            containerColor = StatusGreenVibrant,
+                            disabledContainerColor = TechPrimary.copy(alpha = 0.1f)
                         )
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Confirmar Préstamo", fontWeight = FontWeight.Bold)
+                        Text("REGISTRAR PRÉSTAMO", fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -142,29 +163,32 @@ fun ModernTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
+    placeholder: String = "",
     error: String?
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            color = TechPrimary,
+            fontWeight = FontWeight.Bold
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = Color.Gray.copy(alpha = 0.5f)) },
             isError = error != null,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedBorderColor = PrimaryBlue,
+                focusedBorderColor = TechPrimary,
+                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White
             ),
             supportingText = {
-                if (error != null) Text(error, color = MaterialTheme.colorScheme.error)
+                if (error != null) Text(error, color = StatusRedVibrant)
             }
         )
     }
@@ -173,16 +197,17 @@ fun ModernTextField(
 @Composable
 fun AlertNoDisponible() {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(containerColor = StatusRedVibrant.copy(alpha = 0.1f)),
         shape = MaterialTheme.shapes.medium
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Icon(Icons.Default.Info, contentDescription = null, tint = StatusRedVibrant)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 "Este equipo no se encuentra disponible actualmente.",
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.bodyMedium
+                color = StatusRedVibrant,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
             )
         }
     }

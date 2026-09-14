@@ -4,8 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.prestamolabctma.data.InMemoryPrestamoRepository
 import com.example.prestamolabctma.data.PrestamoRepository
-import com.example.prestamolabctma.model.EstadoSolicitud
-import com.example.prestamolabctma.model.SolicitudPrestamo
+import com.example.prestamolabctma.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +30,7 @@ class PrestamoViewModel(
             _uiState.update {
                 it.copy(
                     equipos = listaEquipos,
+                    equiposFiltrados = listaEquipos,
                     solicitudes = listaSolicitudes,
                     estaCargando = false
                 )
@@ -38,19 +38,35 @@ class PrestamoViewModel(
         }
     }
 
+    fun onBusquedaChanged(query: String) {
+        _uiState.update { estado ->
+            val filtrados = if (query.isEmpty()) {
+                estado.equipos
+            } else {
+                estado.equipos.filter { 
+                    it.nombre.contains(query, ignoreCase = true) || 
+                    it.categoria.name.contains(query, ignoreCase = true)
+                }
+            }
+            estado.copy(queryBusqueda = query, equiposFiltrados = filtrados)
+        }
+    }
+
     fun seleccionarEquipo(equipoId: Int) {
         viewModelScope.launch {
             val equipo = repository.obtenerEquipo(equipoId)
-            _uiState.update {
-                it.copy(
+            val error = if (equipoId == 0) "Debe seleccionar un equipo" else null
+            _uiState.update { estado ->
+                val form = FormularioSolicitudState(equipoId = equipoId, errorEquipo = error)
+                estado.copy(
                     equipoSeleccionado = equipo,
-                    formulario = FormularioSolicitudState(equipoId = equipoId)
+                    formulario = form.copy(esFormularioValido = validarFormularioCompleto(form)),
+                    mensajeError = null
                 )
             }
         }
     }
 
-    // Actualiza los campos del formulario y valida en tiempo real
     fun onAmbienteChanged(nuevoAmbiente: String) {
         val error = if (nuevoAmbiente.isBlank()) "El ambiente o destino es obligatorio" else null
         _uiState.update { estado ->
@@ -81,8 +97,9 @@ class PrestamoViewModel(
     fun onDuracionChanged(nuevaDuracion: String) {
         val duracionNum = nuevaDuracion.toIntOrNull()
         val error = when {
+            nuevaDuracion.isBlank() -> "La duración es obligatoria"
             duracionNum == null -> "Ingresa un número válido"
-            duracionNum < 1 -> "La duración mínima es 1 hora"
+            duracionNum <= 0 -> "La duración debe ser mayor a 0"
             duracionNum > 8 -> "La duración máxima son 8 horas"
             else -> null
         }
@@ -97,12 +114,12 @@ class PrestamoViewModel(
 
     private fun validarFormularioCompleto(form: FormularioSolicitudState): Boolean {
         val duracionNum = form.duracionHoras.toIntOrNull()
-        return form.ambienteDestino.isNotBlank() &&
+        return form.equipoId != 0 &&
+                form.ambienteDestino.isNotBlank() &&
                 form.proposito.length in 10..180 &&
                 duracionNum != null && duracionNum in 1..8
     }
 
-    // Crear la solicitud de préstamo
     fun guardarSolicitud() {
         val form = _uiState.value.formulario
         if (!form.esFormularioValido) return
@@ -152,7 +169,153 @@ class PrestamoViewModel(
         }
     }
 
+    fun aprobarSolicitud(solicitudId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.aprobarSolicitud(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Solicitud aprobada") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al aprobar") }
+            }
+        }
+    }
+
+    fun rechazarSolicitud(solicitudId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.rechazarSolicitud(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Solicitud rechazada") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al rechazar") }
+            }
+        }
+    }
+
+    fun finalizarPrestamo(solicitudId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(estaCargando = true) }
+            val resultado = repository.finalizarPrestamo(solicitudId)
+            _uiState.update { it.copy(estaCargando = false) }
+
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo devuelto correctamente") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message ?: "Error al devolver") }
+            }
+        }
+    }
+
     fun limpiarMensajes() {
         _uiState.update { it.copy(mensajeExito = null, mensajeError = null) }
+    }
+
+    // --- CRUD EQUIPOS (feat/Ana) ---
+
+    fun onNombreEquipoChanged(nuevoNombre: String) {
+        _uiState.update { estado ->
+            val error = if (nuevoNombre.isBlank()) "El nombre es obligatorio" else null
+            val form = estado.formularioEquipo.copy(nombre = nuevoNombre, errorNombre = error)
+            estado.copy(formularioEquipo = form.copy(esValido = nuevoNombre.isNotBlank()))
+        }
+    }
+
+    fun onDescripcionEquipoChanged(nuevaDesc: String) {
+        _uiState.update { estado ->
+            estado.copy(formularioEquipo = estado.formularioEquipo.copy(descripcion = nuevaDesc))
+        }
+    }
+
+    fun onCategoriaEquipoChanged(nuevaCat: CategoriaEquipo) {
+        _uiState.update { estado ->
+            estado.copy(formularioEquipo = estado.formularioEquipo.copy(categoria = nuevaCat))
+        }
+    }
+
+    fun prepararNuevoEquipo() {
+        _uiState.update { it.copy(formularioEquipo = FormularioEquipoState()) }
+    }
+
+    fun prepararEditarEquipo(equipo: Equipo) {
+        _uiState.update { 
+            it.copy(
+                formularioEquipo = FormularioEquipoState(
+                    id = equipo.id,
+                    nombre = equipo.nombre,
+                    descripcion = equipo.descripcion,
+                    categoria = equipo.categoria,
+                    esValido = true
+                )
+            )
+        }
+    }
+
+    fun guardarEquipo() {
+        val form = _uiState.value.formularioEquipo
+        if (!form.esValido) return
+
+        val equipo = Equipo(
+            id = form.id,
+            nombre = form.nombre,
+            descripcion = form.descripcion,
+            categoria = form.categoria,
+            estado = if (form.id == 0) EstadoEquipo.DISPONIBLE 
+                     else _uiState.value.equipos.find { it.id == form.id }?.estado ?: EstadoEquipo.DISPONIBLE
+        )
+
+        viewModelScope.launch {
+            val resultado = if (equipo.id == 0) repository.agregarEquipo(equipo) 
+                            else repository.actualizarEquipo(equipo)
+            
+            resultado.onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo guardado correctamente") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message) }
+            }
+        }
+    }
+
+    fun eliminarEquipo(id: Int) {
+        viewModelScope.launch {
+            repository.eliminarEquipo(id).onSuccess {
+                cargarDatos()
+                _uiState.update { it.copy(mensajeExito = "Equipo eliminado") }
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensajeError = error.message) }
+            }
+        }
+    }
+
+    // --- Soporte para otras funciones de main si existen ---
+    fun onQueryBusquedaChanged(nuevaQuery: String) {
+        onBusquedaChanged(nuevaQuery)
+    }
+
+    fun onCategoriaSelected(categoria: CategoriaEquipo?) {
+        _uiState.update { it.copy(categoriaSeleccionada = categoria) }
+    }
+
+    fun toggleEstadoEquipo(equipoId: Int) {
+        val equipo = _uiState.value.equipos.find { it.id == equipoId } ?: return
+        val nuevoEstado = if (equipo.estado == EstadoEquipo.DISPONIBLE) {
+            EstadoEquipo.PRESTADO
+        } else {
+            EstadoEquipo.DISPONIBLE
+        }
+
+        viewModelScope.launch {
+            repository.actualizarEstadoEquipo(equipoId, nuevoEstado).onSuccess {
+                cargarDatos()
+            }
+        }
     }
 }
