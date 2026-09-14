@@ -135,7 +135,8 @@ class PrestamoViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
-            val resultado = repository.crearSolicitud(nuevaSolicitud)
+            val resultado = runCatching { repository.crearSolicitud(nuevaSolicitud) }
+                .getOrElse { Result.failure(it) }
             _uiState.update { it.copy(estaCargando = false) }
 
             resultado.onSuccess {
@@ -148,7 +149,7 @@ class PrestamoViewModel(
                 }
             }.onFailure { error ->
                 _uiState.update { estado ->
-                    estado.copy(mensajeError = error.message ?: "Error al guardar la solicitud")
+                    estado.copy(mensajeError = mapErrorToMessage(error))
                 }
             }
         }
@@ -157,14 +158,15 @@ class PrestamoViewModel(
     fun cancelarSolicitud(solicitudId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
-            val resultado = repository.cancelarSolicitud(solicitudId)
+            val resultado = runCatching { repository.cancelarSolicitud(solicitudId) }
+                .getOrElse { Result.failure(it) }
             _uiState.update { it.copy(estaCargando = false) }
 
             resultado.onSuccess {
                 cargarDatos()
                 _uiState.update { it.copy(mensajeExito = "Solicitud cancelada con éxito") }
             }.onFailure { error ->
-                _uiState.update { it.copy(mensajeError = error.message ?: "Error al cancelar") }
+                _uiState.update { it.copy(mensajeError = mapErrorToMessage(error)) }
             }
         }
     }
@@ -172,14 +174,15 @@ class PrestamoViewModel(
     fun aprobarSolicitud(solicitudId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
-            val resultado = repository.aprobarSolicitud(solicitudId)
+            val resultado = runCatching { repository.aprobarSolicitud(solicitudId) }
+                .getOrElse { Result.failure(it) }
             _uiState.update { it.copy(estaCargando = false) }
 
             resultado.onSuccess {
                 cargarDatos()
                 _uiState.update { it.copy(mensajeExito = "Solicitud aprobada") }
             }.onFailure { error ->
-                _uiState.update { it.copy(mensajeError = error.message ?: "Error al aprobar") }
+                _uiState.update { it.copy(mensajeError = mapErrorToMessage(error)) }
             }
         }
     }
@@ -187,14 +190,15 @@ class PrestamoViewModel(
     fun rechazarSolicitud(solicitudId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
-            val resultado = repository.rechazarSolicitud(solicitudId)
+            val resultado = runCatching { repository.rechazarSolicitud(solicitudId) }
+                .getOrElse { Result.failure(it) }
             _uiState.update { it.copy(estaCargando = false) }
 
             resultado.onSuccess {
                 cargarDatos()
                 _uiState.update { it.copy(mensajeExito = "Solicitud rechazada") }
             }.onFailure { error ->
-                _uiState.update { it.copy(mensajeError = error.message ?: "Error al rechazar") }
+                _uiState.update { it.copy(mensajeError = mapErrorToMessage(error)) }
             }
         }
     }
@@ -202,15 +206,26 @@ class PrestamoViewModel(
     fun finalizarPrestamo(solicitudId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true) }
-            val resultado = repository.finalizarPrestamo(solicitudId)
+            val resultado = runCatching { repository.finalizarPrestamo(solicitudId) }
+                .getOrElse { Result.failure(it) }
             _uiState.update { it.copy(estaCargando = false) }
 
             resultado.onSuccess {
                 cargarDatos()
                 _uiState.update { it.copy(mensajeExito = "Equipo devuelto correctamente") }
             }.onFailure { error ->
-                _uiState.update { it.copy(mensajeError = error.message ?: "Error al devolver") }
+                _uiState.update { it.copy(mensajeError = mapErrorToMessage(error)) }
             }
+        }
+    }
+
+    private fun mapErrorToMessage(error: Throwable): String {
+        return when (error) {
+            is com.example.prestamolabctma.data.PrestamoError.ValidationError -> "Validación: ${error.message}"
+            is com.example.prestamolabctma.data.PrestamoError.NotFoundError -> "No encontrado: ${error.message}"
+            is com.example.prestamolabctma.data.PrestamoError.BusinessError -> "Error de negocio: ${error.message}"
+            is com.example.prestamolabctma.data.PrestamoError.ServerError -> "Servidor: ${error.message}"
+            else -> error.message ?: "Ocurrió un error inesperado"
         }
     }
 
@@ -272,26 +287,30 @@ class PrestamoViewModel(
         )
 
         viewModelScope.launch {
-            val resultado = if (equipo.id == 0) repository.agregarEquipo(equipo) 
-                            else repository.actualizarEquipo(equipo)
+            val resultado = runCatching {
+                if (equipo.id == 0) repository.agregarEquipo(equipo)
+                else repository.actualizarEquipo(equipo)
+            }.getOrElse { Result.failure(it) }
             
             resultado.onSuccess {
                 cargarDatos()
                 _uiState.update { it.copy(mensajeExito = "Equipo guardado correctamente") }
             }.onFailure { error ->
-                _uiState.update { it.copy(mensajeError = error.message) }
+                _uiState.update { it.copy(mensajeError = mapErrorToMessage(error)) }
             }
         }
     }
 
     fun eliminarEquipo(id: Int) {
         viewModelScope.launch {
-            repository.eliminarEquipo(id).onSuccess {
-                cargarDatos()
-                _uiState.update { it.copy(mensajeExito = "Equipo eliminado") }
-            }.onFailure { error ->
-                _uiState.update { it.copy(mensajeError = error.message) }
-            }
+            runCatching { repository.eliminarEquipo(id) }
+                .getOrElse { Result.failure(it) }
+                .onSuccess {
+                    cargarDatos()
+                    _uiState.update { it.copy(mensajeExito = "Equipo eliminado") }
+                }.onFailure { error ->
+                    _uiState.update { it.copy(mensajeError = mapErrorToMessage(error)) }
+                }
         }
     }
 
