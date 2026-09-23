@@ -69,9 +69,19 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
+    override suspend fun actualizarEquipo(equipo: Equipo): Result<Unit> {
+        val index = equipos.indexOfFirst { it.id == equipo.id }
+        if (index != -1) {
+            equipos[index] = equipo
+            return Result.success(Unit)
+        }
+        return Result.failure(PrestamoError.NotFoundError("El equipo con ID ${equipo.id} no existe"))
+    }
+
     override suspend fun eliminarEquipo(id: Int): Result<Unit> {
         val eliminado = equipos.removeIf { it.id == id }
-        return if (eliminado) Result.success(Unit) else Result.failure(Exception("Equipo no encontrado"))
+        return if (eliminado) Result.success(Unit) 
+               else Result.failure(PrestamoError.NotFoundError("No se puede eliminar: equipo no encontrado"))
     }
 
     override suspend fun actualizarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> {
@@ -80,7 +90,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
             equipos[index] = equipos[index].copy(estado = nuevoEstado)
             return Result.success(Unit)
         }
-        return Result.failure(Exception("Equipo no encontrado"))
+        return Result.failure(PrestamoError.NotFoundError("Equipo no encontrado para actualizar estado"))
     }
 
     override suspend fun obtenerSolicitudes(): List<SolicitudPrestamo> = solicitudes.toList()
@@ -88,15 +98,20 @@ class InMemoryPrestamoRepository : PrestamoRepository {
     override suspend fun obtenerSolicitud(id: Int): SolicitudPrestamo? = solicitudes.find { it.id == id }
 
     override suspend fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit> {
+        // Simulación de validación de negocio
+        if (solicitud.ambienteDestino.isBlank()) {
+            return Result.failure(PrestamoError.ValidationError("El ambiente de destino no puede estar vacío"))
+        }
+
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
 
         if (equipoIndex == -1) {
-            return Result.failure(Exception("El equipo solicitado no existe"))
+            return Result.failure(PrestamoError.NotFoundError("El equipo solicitado (ID: ${solicitud.equipoId}) no existe"))
         }
 
         val equipo = equipos[equipoIndex]
         if (equipo.estado != EstadoEquipo.DISPONIBLE) {
-            return Result.failure(Exception("El equipo no está disponible para préstamo"))
+            return Result.failure(PrestamoError.BusinessError("El equipo '${equipo.nombre}' no está disponible actualmente"))
         }
 
         val nuevaSolicitud = solicitud.copy(id = siguienteSolicitudId++)
@@ -110,12 +125,12 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         val solicitudIndex = solicitudes.indexOfFirst { it.id == id }
 
         if (solicitudIndex == -1) {
-            return Result.failure(Exception("La solicitud no existe"))
+            return Result.failure(PrestamoError.NotFoundError("La solicitud con ID $id no existe"))
         }
 
         val solicitud = solicitudes[solicitudIndex]
         if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
-            return Result.failure(Exception("Solo se pueden cancelar solicitudes en estado SOLICITADA"))
+            return Result.failure(PrestamoError.BusinessError("Solo se pueden cancelar solicitudes en estado SOLICITADA. Estado actual: ${solicitud.estado}"))
         }
 
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.CANCELADA)
@@ -130,16 +145,15 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     override suspend fun aprobarSolicitud(id: Int): Result<Unit> {
         val solicitudIndex = solicitudes.indexOfFirst { it.id == id }
-        if (solicitudIndex == -1) return Result.failure(Exception("La solicitud no existe"))
+        if (solicitudIndex == -1) return Result.failure(PrestamoError.NotFoundError("Solicitud no encontrada"))
 
         val solicitud = solicitudes[solicitudIndex]
         if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
-            return Result.failure(Exception("Solo se pueden aprobar solicitudes en estado SOLICITADA"))
+            return Result.failure(PrestamoError.BusinessError("La solicitud ya ha sido procesada o cancelada"))
         }
 
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.APROBADA)
         
-        // Al aprobar, el equipo pasa de RESERVADO a PRESTADO
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.PRESTADO)
@@ -150,16 +164,15 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     override suspend fun rechazarSolicitud(id: Int): Result<Unit> {
         val solicitudIndex = solicitudes.indexOfFirst { it.id == id }
-        if (solicitudIndex == -1) return Result.failure(Exception("La solicitud no existe"))
+        if (solicitudIndex == -1) return Result.failure(PrestamoError.NotFoundError("Solicitud no encontrada"))
 
         val solicitud = solicitudes[solicitudIndex]
         if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
-            return Result.failure(Exception("Solo se pueden rechazar solicitudes en estado SOLICITADA"))
+            return Result.failure(PrestamoError.BusinessError("No se puede rechazar una solicitud ya procesada"))
         }
 
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.RECHAZADA)
 
-        // Al rechazar, el equipo vuelve a estar DISPONIBLE
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)
@@ -170,12 +183,15 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     override suspend fun finalizarPrestamo(solicitudId: Int): Result<Unit> {
         val solicitudIndex = solicitudes.indexOfFirst { it.id == solicitudId }
-        if (solicitudIndex == -1) return Result.failure(Exception("La solicitud no existe"))
+        if (solicitudIndex == -1) return Result.failure(PrestamoError.NotFoundError("Solicitud no encontrada"))
 
         val solicitud = solicitudes[solicitudIndex]
+        if (solicitud.estado != EstadoSolicitud.APROBADA) {
+            return Result.failure(PrestamoError.BusinessError("Solo se pueden finalizar préstamos aprobados"))
+        }
+
         solicitudes[solicitudIndex] = solicitud.copy(estado = EstadoSolicitud.DEVUELTA)
 
-        // Al devolver, el equipo vuelve a estar DISPONIBLE
         val equipoIndex = equipos.indexOfFirst { it.id == solicitud.equipoId }
         if (equipoIndex != -1) {
             equipos[equipoIndex] = equipos[equipoIndex].copy(estado = EstadoEquipo.DISPONIBLE)
