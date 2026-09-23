@@ -6,5 +6,8 @@ data class SolicitudPrestamo(
     val ambienteDestino: String,
     val proposito: String,
     val duracionHoras: Int,
-    val estado: EstadoSolicitud
+    val estado: EstadoSolicitud,
+    val fotoValidacionUrl: String? = null,
+    val borrowerName: String? = null,
+    val createdAt: String? = null
 )
