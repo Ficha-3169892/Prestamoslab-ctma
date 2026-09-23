@@ -1,162 +1,143 @@
 package com.example.prestamolabctma.navigation
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material3.*
+import android.widget.Toast
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.prestamolabctma.model.EstadoSolicitud
-import com.example.prestamolabctma.ui.*
-import com.example.prestamolabctma.viewmodel.PrestamoViewModel
+import com.example.prestamolabctma.PrestamoLabApp
+import com.example.prestamolabctma.data.remote.SupabaseProvider
+import com.example.prestamolabctma.ui.CatalogScreen
+import com.example.prestamolabctma.ui.EquipmentDetailScreen
+import com.example.prestamolabctma.ui.LoanRequestScreen
+import com.example.prestamolabctma.ui.MyLoansScreen
+import com.example.prestamolabctma.ui.auth.AuthViewModel
+import com.example.prestamolabctma.ui.auth.LoginScreen
+import com.example.prestamolabctma.ui.auth.RegisterScreen
+import com.example.prestamolabctma.viewmodel.CatalogViewModel
+import com.example.prestamolabctma.viewmodel.CatalogViewModelFactory
 
 @Composable
-fun AppNavigation(viewModel: PrestamoViewModel) {
+fun AppNavigation() {
+    val context = LocalContext.current
+    val app = context.applicationContext as PrestamoLabApp
+
+    val catalogViewModel: CatalogViewModel = viewModel(
+        factory = CatalogViewModelFactory(app.repository)
+    )
+
+    val supabaseClient = SupabaseProvider.client
+    val authViewModel: AuthViewModel = viewModel {
+        AuthViewModel(supabaseClient)
+    }
+
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
 
-    val showBottomBar = currentDestination?.route in listOf("catalogo", "solicitudes")
-    val snackbarHostState = remember { SnackbarHostState() }
+    val uiState by catalogViewModel.uiState.collectAsStateWithLifecycle()
+    val query by catalogViewModel.queryBusqueda.collectAsStateWithLifecycle()
+    val category by catalogViewModel.categoriaSeleccionada.collectAsStateWithLifecycle()
+    val equipmentDetail by catalogViewModel.equipmentDetail.collectAsStateWithLifecycle()
+    val myLoans by catalogViewModel.myLoans.collectAsStateWithLifecycle()
+    val isRequesting by catalogViewModel.isRequesting.collectAsStateWithLifecycle()
+    val currentUserName by authViewModel.userName.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.mensajeExito, uiState.mensajeError) {
-        uiState.mensajeExito?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.limpiarMensajes()
-        }
-        uiState.mensajeError?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.limpiarMensajes()
+    LaunchedEffect(currentUserName) {
+        if (currentUserName.isNotBlank()) {
+            catalogViewModel.updateProfile(currentUserName, null)
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 8.dp
-                ) {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        label = { Text("Inicio") },
-                        selected = currentDestination?.hierarchy?.any { it.route == "catalogo" } == true,
-                        onClick = {
-                            navController.navigate("catalogo") {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+    NavHost(
+        navController = navController,
+        startDestination = "login"
+    ) {
+        composable("login") {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                LoginScreen(
+                    viewModel = authViewModel,
+                    onLoginSuccess = { role ->
+                        Toast.makeText(context, "Bienvenido. Rol: $role", Toast.LENGTH_SHORT).show()
+                        catalogViewModel.setRole(role)
+                        navController.navigate("catalogo") {
+                            popUpTo("login") { inclusive = true }
                         }
-                    )
-                    NavigationBarItem(
-                        icon = { 
-                            BadgedBox(
-                                badge = {
-                                    val pendientes = uiState.solicitudes.count { it.estado == EstadoSolicitud.SOLICITADA }
-                                    if (pendientes > 0) {
-                                        Badge { Text(pendientes.toString()) }
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.History, contentDescription = null)
-                            }
-                        },
-                        label = { Text("Mis Préstamos") },
-                        selected = currentDestination?.hierarchy?.any { it.route == "solicitudes" } == true,
-                        onClick = {
-                            navController.navigate("solicitudes") {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "catalogo",
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable("catalogo") {
-                CatalogoScreen(
-                    uiState = uiState,
-                    onBusquedaChanged = { viewModel.onBusquedaChanged(it) },
-                    onEquipoSeleccionado = { equipoId ->
-                        viewModel.seleccionarEquipo(equipoId)
-                        navController.navigate("detalle")
                     },
-                    onAgregarEquipo = {
-                        viewModel.prepararNuevoEquipo()
-                        navController.navigate("equipoForm")
-                    },
-                    onEditarEquipo = { equipo ->
-                        viewModel.prepararEditarEquipo(equipo)
-                        navController.navigate("equipoForm")
-                    },
-                    onEliminarEquipo = { id ->
-                        viewModel.eliminarEquipo(id)
-                    },
-                    onCategoriaFilterChanged = { categoria ->
-                        viewModel.onCategoriaSelected(categoria)
+                    onNavigateToRegister = {
+                        navController.navigate("registro")
                     }
                 )
             }
-            composable("detalle") {
-                EquipoDetailScreen(
-                    uiState = uiState,
-                    onSolicitar = { navController.navigate("formulario") },
-                    onVolver = { navController.popBackStack() }
+        }
+
+        composable("registro") {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                RegisterScreen(
+                    viewModel = authViewModel,
+                    onRegisterSuccess = { role ->
+                        Toast.makeText(context, "¡Registro exitoso! Rol: $role", Toast.LENGTH_LONG).show()
+                        catalogViewModel.setRole(role)
+                        navController.navigate("catalogo") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
                 )
             }
-            composable("formulario") {
-                SolicitudFormScreen(
-                    viewModel = viewModel,
-                    uiState = uiState,
-                    onVolver = { navController.popBackStack() }
-                )
-            }
-            composable("solicitudes") {
-                MisSolicitudesScreen(
-                    uiState = uiState,
-                    onCancelarSolicitud = { viewModel.cancelarSolicitud(it) },
-                    onAprobarSolicitud = { viewModel.aprobarSolicitud(it) },
-                    onRechazarSolicitud = { viewModel.rechazarSolicitud(it) },
-                    onFinalizarPrestamo = { viewModel.finalizarPrestamo(it) },
-                    onVolver = { navController.popBackStack() }
-                )
-            }
-            composable("equipoForm") {
-                EquipoFormScreen(
-                    viewModel = viewModel,
-                    uiState = uiState,
-                    onVolver = { navController.popBackStack() }
-                )
-            }
+        }
+
+        composable("catalogo") {
+            CatalogScreen(
+                viewModel = catalogViewModel,
+                onEquipmentClick = { id ->
+                    catalogViewModel.selectEquipment(id)
+                    navController.navigate("detalle")
+                },
+                onLogout = {
+                    authViewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable("detalle") {
+            EquipmentDetailScreen(
+                equipo = equipmentDetail,
+                onSolicitar = { navController.navigate("solicitud") },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("solicitud") {
+            LoanRequestScreen(
+                equipo = equipmentDetail,
+                isRequesting = isRequesting,
+                onConfirmRequest = { ambiente, proposito, duracion, photoUrl ->
+                    catalogViewModel.createLoan(ambiente, proposito, duracion, photoUrl)
+                    navController.popBackStack()
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("mis_prestamos") {
+            MyLoansScreen(
+                loans = myLoans,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

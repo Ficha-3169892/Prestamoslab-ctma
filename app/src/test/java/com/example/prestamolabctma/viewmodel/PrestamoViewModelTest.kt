@@ -535,7 +535,7 @@ class PrestamoViewModelTest {
     }
 
     @Test
-    fun `CP - 10 - Cambio consecutivo de filtros`() = runTest {
+    fun `HU 9 CP - 10 - Cambio consecutivo de filtros`() = runTest {
         viewModel.onCategoriaSelected(CategoriaEquipo.COMPUTO)
         assertEquals(CategoriaEquipo.COMPUTO, viewModel.uiState.value.categoriaSeleccionada)
         
