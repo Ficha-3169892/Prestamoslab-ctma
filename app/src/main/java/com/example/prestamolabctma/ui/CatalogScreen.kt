@@ -153,16 +153,83 @@ fun CatalogScreen(
                 }
             } else {
                 Column {
+                    // BANNER DE BIENVENIDA AL DASHBOARD
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 8.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = TechPrimary.copy(alpha = 0.08f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TechPrimary.copy(alpha = 0.15f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(44.dp),
+                                shape = CircleShape,
+                                color = TechPrimary
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "¡Hola, ${userName.ifBlank { "Usuario" }}!",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark
+                                )
+                                Text(
+                                    text = if (userRole == "DUEÑO") "Panel de gestión de inventario y solicitudes" else "Explora los equipos disponibles para préstamo",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextGray
+                                )
+                            }
+                            Surface(
+                                color = TechSecondary.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = userRole,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TechSecondary
+                                )
+                            }
+                        }
+                    }
+
                     OutlinedTextField(
                         value = queryBusqueda,
                         onValueChange = { viewModel.onQueryChanged(it) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        placeholder = { Text("Buscar dispositivo...") },
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        placeholder = { Text("Buscar dispositivo por nombre o categoría...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TechPrimary) },
-                        shape = RoundedCornerShape(14.dp),
-                        singleLine = true
+                        trailingIcon = {
+                            if (queryBusqueda.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.onQueryChanged("") }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "Limpiar búsqueda", tint = TextGray)
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
                     )
 
                     LazyRow(
@@ -176,14 +243,33 @@ fun CatalogScreen(
                             FilterChip(
                                 selected = categoriaSeleccionada == null,
                                 onClick = { viewModel.onCategorySelected(null) },
-                                label = { Text("Todas") }
+                                label = { Text("Todas", fontWeight = if (categoriaSeleccionada == null) FontWeight.Bold else FontWeight.Medium) },
+                                leadingIcon = if (categoriaSeleccionada == null) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = TechPrimary,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                )
                             )
                         }
                         items(CategoriaEquipo.entries) { cat ->
+                            val isSelected = categoriaSeleccionada == cat
                             FilterChip(
-                                selected = categoriaSeleccionada == cat,
+                                selected = isSelected,
                                 onClick = { viewModel.onCategorySelected(cat) },
-                                label = { Text(cat.name) }
+                                label = { Text(cat.name, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = TechPrimary,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                )
                             )
                         }
                     }
