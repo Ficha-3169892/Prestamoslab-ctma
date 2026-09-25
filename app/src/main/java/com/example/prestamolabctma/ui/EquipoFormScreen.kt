@@ -6,7 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +36,7 @@ fun EquipoFormScreen(
                 title = { Text(if (form.id == 0) "Nuevo Equipo" else "Editar Equipo", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -50,7 +50,6 @@ fun EquipoFormScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Usamos ModernTextField definido en SolicitudFormScreen
             ModernTextField(
                 value = form.nombre,
                 onValueChange = { viewModel.onNombreEquipoChanged(it) },
@@ -92,7 +91,7 @@ fun EquipoFormScreen(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        CategoriaEquipo.values().forEach { categoria ->
+                        CategoriaEquipo.entries.forEach { categoria ->
                             DropdownMenuItem(
                                 text = { Text(categoria.name) },
                                 onClick = {
@@ -126,6 +125,39 @@ fun EquipoFormScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Guardar Equipo", fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+@Composable
+private fun ModernTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    error: String? = null
+) {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            isError = error != null,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                errorContainerColor = Color.White
+            )
+        )
+        if (error != null) {
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
         }
     }
 }
