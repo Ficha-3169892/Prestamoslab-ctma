@@ -13,53 +13,129 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Estado unificado para la UI
+data class CatalogUiStateData(
+    val equipos: List<Equipo> = emptyList(),
+    val prestamos: List<SolicitudPrestamo> = emptyList(),
+    val isAdmin: Boolean = false,
+    val currentUserId: Int = 1,
+    val userName: String = "Usuario PréstamoLab"
+)
+
 class CatalogViewModel(
     private val repository: EquipmentRepository
 ) : ViewModel() {
 
-    private val _queryBusqueda = MutableStateFlow("")
-    val queryBusqueda: StateFlow<String> = _queryBusqueda.asStateFlow()
-
-    private val _categoriaSeleccionada = MutableStateFlow<CategoriaEquipo?>(null)
-    val categoriaSeleccionada: StateFlow<CategoriaEquipo?> = _categoriaSeleccionada.asStateFlow()
-
-    val uiState: StateFlow<CatalogUiState> = combine(
-        repository.getEquipments(),
-        _queryBusqueda,
-        _categoriaSeleccionada
-    ) { equipments, query, category ->
-        val filtered = equipments.filter { equipo ->
-            (query.isBlank() || equipo.nombre.contains(query, ignoreCase = true)) &&
-            (category == null || equipo.categoria == category)
-        }
-        if (equipments.isEmpty()) CatalogUiState.Empty 
-        else CatalogUiState.Success(filtered)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CatalogUiState.Loading)
-
-    private val _equipmentDetail = MutableStateFlow<Equipo?>(null)
-    val equipmentDetail: StateFlow<Equipo?> = _equipmentDetail.asStateFlow()
-
-    private val _myLoans = repository.getMyLoans()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val myLoans: StateFlow<List<SolicitudPrestamo>> = _myLoans
-
-    // Flujo para el Dueño
-    val allLoansAdmin: StateFlow<List<SolicitudPrestamo>> = repository.getAllLoansAdmin()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private val _isRequesting = MutableStateFlow(false)
-    val isRequesting: StateFlow<Boolean> = _isRequesting.asStateFlow()
-
-    // Perfil del Usuario
     private val _userRole = MutableStateFlow("PRESTATARIO")
     val userRole: StateFlow<String> = _userRole.asStateFlow()
 
     private val _userName = MutableStateFlow("Usuario PréstamoLab")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
-    fun setRole(role: String) {
-        _userRole.value = role.uppercase().trim()
-        refreshData()
+    private val _currentUserId = MutableStateFlow(1)
+
+    val uiState: StateFlow<CatalogUiStateData> = combine(
+        repository.getEquipments(),
+        repository.getAllLoansAdmin(),
+        _userRole,
+        _userName
+    ) { equipments, loans, role, name ->
+        CatalogUiStateData(
+            equipos = equipments,
+            prestamos = loans,
+            isAdmin = role.equals("ADMIN", ignoreCase = true) || role.equals("DUEÑO", ignoreCase = true),
+            currentUserId = _currentUserId.value,
+            userName = name
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        CatalogUiStateData()
+    )
+
+    fun logout() {
+        // Lógica de cierre de sesión
+    }
+
+    fun actualizarPerfil(newName: String) {
+        _userName.value = newName
+    }
+
+    // --- ACCIONES DE PRÉSTAMO ---
+
+    fun solicitarPrestamo(equipoId: Int, ambiente: String, proposito: String, duracion: Int) {
+        viewModelScope.launch {
+            val solicitud = SolicitudPrestamo(
+                id = 0,
+                equipoId = equipoId,
+                ambienteDestino = ambiente,
+                proposito = proposito,
+                duracionHoras = duracion,
+                estado = EstadoSolicitud.SOLICITADA,
+                borrowerName = _userName.value,
+                usuarioId = _currentUserId.value
+            )
+            repository.createLoanRequest(solicitud, null)
+            refreshData()
+        }
+    }
+
+    fun aprobarPrestamo(loanId: Int) {
+        changeLoanStatus(loanId, EstadoSolicitud.APROBADA.name)
+    }
+
+    fun rechazarPrestamo(loanId: Int) {
+        changeLoanStatus(loanId, EstadoSolicitud.RECHAZADA.name)
+    }
+
+    fun finalizarPrestamo(loanId: Int) {
+        changeLoanStatus(loanId, "DEVUELTA")
+    }
+
+    private fun changeLoanStatus(loanId: Int, status: String) {
+        viewModelScope.launch {
+            repository.updateLoanStatus(loanId, status)
+            refreshData()
+        }
+    }
+
+    // --- ACCIONES DE EQUIPO (ADMIN) ---
+
+    fun agregarEquipo(nombre: String, descripcion: String, categoriaStr: String, disponible: Boolean) {
+        viewModelScope.launch {
+            val cat = parseCategoria(categoriaStr)
+            val nuevo = Equipo(
+                id = 0,
+                nombre = nombre,
+                categoria = cat,
+                estado = if (disponible) EstadoEquipo.DISPONIBLE else EstadoEquipo.MANTENIMIENTO,
+                descripcion = descripcion
+            )
+            repository.addEquipment(nuevo)
+            refreshData()
+        }
+    }
+
+    fun actualizarEquipo(id: Int, nombre: String, descripcion: String, categoriaStr: String, disponible: Boolean) {
+        viewModelScope.launch {
+            val cat = parseCategoria(categoriaStr)
+            val modificado = Equipo(
+                id = id,
+                nombre = nombre,
+                categoria = cat,
+                estado = if (disponible) EstadoEquipo.DISPONIBLE else EstadoEquipo.MANTENIMIENTO,
+                descripcion = descripcion
+            )
+            repository.updateEquipment(modificado)
+            refreshData()
+        }
+    }
+
+    fun eliminarEquipo(id: Int) {
+        viewModelScope.launch {
+            repository.deleteEquipment(id)
+            refreshData()
+        }
     }
 
     fun refreshData() {
@@ -68,120 +144,33 @@ class CatalogViewModel(
         }
     }
 
-    fun updateProfile(name: String, photoUrl: String?) {
-        _userName.value = name
-    }
+    // --- UTILIDADES ---
 
-    fun onQueryChanged(newQuery: String) {
-        _queryBusqueda.value = newQuery
-    }
-
-    fun onCategorySelected(category: CategoriaEquipo?) {
-        _categoriaSeleccionada.value = category
-    }
-
-    fun selectEquipment(id: Int) {
-        viewModelScope.launch {
-            val equipo = repository.getEquipmentById(id)
-            _equipmentDetail.value = equipo
+    private fun parseCategoria(categoriaStr: String): CategoriaEquipo {
+        return try {
+            CategoriaEquipo.valueOf(categoriaStr.uppercase())
+        } catch (e: Exception) {
+            CategoriaEquipo.OTROS
         }
     }
 
-    fun createLoan(ambiente: String, proposito: String, duracion: Int, photoUrl: String? = null) {
-        val currentEquipment = _equipmentDetail.value ?: return
-        if (_isRequesting.value) return
-        _isRequesting.value = true
-
-        viewModelScope.launch {
-            val solicitud = SolicitudPrestamo(
-                id = 0,
-                equipoId = currentEquipment.id,
-                ambienteDestino = ambiente,
-                proposito = proposito,
-                duracionHoras = duracion,
-                estado = EstadoSolicitud.SOLICITADA,
-                fotoValidacionUrl = photoUrl,
-                borrowerName = _userName.value
-            )
-            
-            repository.createLoanRequest(solicitud, photoUrl)
-                .onSuccess { 
-                    _isRequesting.value = false 
-                    refreshData()
-                }
-                .onFailure { _isRequesting.value = false }
-        }
-    }
-
-    // Funciones del DUEÑO
-    fun addNewEquipment(nombre: String, categoria: CategoriaEquipo, descripcion: String) {
-        viewModelScope.launch {
-            val nuevo = Equipo(
-                id = 0,
-                nombre = nombre,
-                categoria = categoria,
-                estado = EstadoEquipo.DISPONIBLE,
-                descripcion = descripcion
-            )
-            repository.addEquipment(nuevo)
-        }
-    }
-
-    fun updateEquipmentAdmin(
-        id: Int,
-        nombre: String,
-        categoria: CategoriaEquipo,
-        descripcion: String,
-        estado: EstadoEquipo = EstadoEquipo.DISPONIBLE
-    ) {
-        viewModelScope.launch {
-            val modificado = Equipo(
-                id = id,
-                nombre = nombre,
-                categoria = categoria,
-                estado = estado,
-                descripcion = descripcion
-            )
-            repository.updateEquipment(modificado)
-        }
-    }
-
-    fun removeEquipment(id: Int) {
-        viewModelScope.launch {
-            repository.deleteEquipment(id)
-        }
-    }
-
-    fun changeLoanStatus(loanId: Int, status: String) {
-        viewModelScope.launch {
-            repository.updateLoanStatus(loanId, status)
-        }
-    }
-
-    fun finalizeLoan(loanId: Int) {
-        viewModelScope.launch {
-            repository.updateLoanStatus(loanId, "DEVUELTA")
-        }
-    }
-
-    // Utilidad para calcular tiempo restante compatible con API 24
     fun getRemainingTime(loan: SolicitudPrestamo): String {
         if (loan.estado != EstadoSolicitud.APROBADA && loan.estado.name != "ENTREGADA") return "N/A"
         val createdAtStr = loan.createdAt ?: return "Calculando..."
-        
+
         return try {
             val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             sdf.timeZone = TimeZone.getTimeZone("UTC")
-            
+
             val dateCreated = sdf.parse(createdAtStr) ?: return "Error formato"
             val calendar = Calendar.getInstance()
             calendar.time = dateCreated
             calendar.add(Calendar.HOUR, loan.duracionHoras)
-            
+
             val endTime = calendar.timeInMillis
             val currentTime = System.currentTimeMillis()
             val diff = endTime - currentTime
-            
+
             if (diff <= 0) "Expirado"
             else {
                 val hours = diff / (1000 * 60 * 60)

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.prestamolabctma.model.EstadoSolicitud
 import com.example.prestamolabctma.model.SolicitudPrestamo
 import com.example.prestamolabctma.ui.theme.*
 
@@ -28,10 +29,17 @@ fun MyLoansScreen(
         containerColor = TechBackground,
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = TechPrimary, titleContentColor = Color.White),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = TechPrimary,
+                    titleContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Color.White
+                        )
                     }
                 },
                 title = { Text("Mis Préstamos") }
@@ -39,12 +47,19 @@ fun MyLoansScreen(
         }
     ) { padding ->
         if (loans.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("Aún no tienes préstamos registrados", color = TextGray)
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -58,29 +73,63 @@ fun MyLoansScreen(
 
 @Composable
 fun LoanItem(loan: SolicitudPrestamo) {
+    // Definición dinámica del color según el estado
+    val statusColor = when (loan.estado) {
+        EstadoSolicitud.APROBADA -> StatusGreenVibrant
+        EstadoSolicitud.SOLICITADA -> StatusOrangeVibrant
+        EstadoSolicitud.RECHAZADA -> StatusRedVibrant
+        else -> Color.Gray
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = TechSurface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Assignment, contentDescription = null, tint = TechSecondary, modifier = Modifier.size(32.dp))
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Ambiente: ${loan.ambienteDestino}", fontWeight = FontWeight.Bold)
-                Text("Propósito: ${loan.proposito}", style = MaterialTheme.typography.bodySmall, color = TextGray)
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Assignment,
+                contentDescription = null,
+                tint = TechSecondary,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Equipo #${loan.equipoId}",
+                    fontWeight = FontWeight.Bold,
+                    color = TechPrimary
+                )
+                Text(
+                    text = "Ambiente: ${loan.ambienteDestino}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                if (loan.proposito.isNotBlank()) {
+                    Text(
+                        text = "Propósito: ${loan.proposito}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray
+                    )
+                }
             }
             Surface(
-                color = TechSecondary.copy(alpha = 0.1f),
+                color = statusColor.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
                     text = loan.estado.name,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = TechSecondary,
-                    fontSize = 10.sp
+                    color = statusColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

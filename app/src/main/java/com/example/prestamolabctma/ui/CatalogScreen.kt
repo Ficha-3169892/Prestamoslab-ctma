@@ -1,8 +1,7 @@
-package com.example.prestamolabctma.ui
+package com.example.app.ui.screens // Ajusta el package según tu proyecto
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,11 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,78 +19,85 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
-import com.example.prestamolabctma.model.CategoriaEquipo
-import com.example.prestamolabctma.model.Equipo
-import com.example.prestamolabctma.model.EstadoEquipo
-import com.example.prestamolabctma.model.EstadoSolicitud
-import com.example.prestamolabctma.model.SolicitudPrestamo
-import com.example.prestamolabctma.ui.theme.*
-import com.example.prestamolabctma.viewmodel.CatalogUiState
-import com.example.prestamolabctma.viewmodel.CatalogViewModel
 
+// ==========================================
+// PALETA DE COLORES / TEMA DE LA APP
+// ==========================================
+val TechPrimary = Color(0xFF1E88E5)
+val TechSecondary = Color(0xFF26A69A)
+val TechSurface = Color(0xFFF5F5F5)
+val TextDark = Color(0xFF212121)
+val TextGray = Color(0xFF757575)
+val StatusGreenVibrant = Color(0xFF4CAF50)
+val StatusOrangeVibrant = Color(0xFFFF9800)
+val StatusRedVibrant = Color(0xFFF44336)
+
+// ==========================================
+// COMPONENTE PRINCIPAL: CATALOG SCREEN
+// ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogScreen(
     viewModel: CatalogViewModel,
-    onEquipmentClick: (Int) -> Unit,
-    onLogout: () -> Unit
+    onNavigateToLogin: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val queryBusqueda by viewModel.queryBusqueda.collectAsState()
-    val categoriaSeleccionada by viewModel.categoriaSeleccionada.collectAsState()
-    val userRole by viewModel.userRole.collectAsState()
-    val userName by viewModel.userName.collectAsState()
-    val allLoansAdmin by viewModel.allLoansAdmin.collectAsState()
-    val myLoans by viewModel.myLoans.collectAsState()
 
-    var showProfileDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) } // 0: Inventario, 1: Préstamos
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Todos") }
+
+    // Estados para controlar los diálogos/modales
     var showAddEquipmentDialog by remember { mutableStateOf(false) }
-    var showEditEquipmentDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var selectedEquipmentToEdit by remember { mutableStateOf<Equipo?>(null) }
+    var equipmentToEdit by remember { mutableStateOf<Equipo?>(null) }
     var equipmentToDelete by remember { mutableStateOf<Equipo?>(null) }
-    var selectedTab by remember { mutableIntStateOf(0) } 
-
-    var editName by remember(userName) { mutableStateOf(userName) }
+    var equipmentToRequest by remember { mutableStateOf<Equipo?>(null) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = TechBackground,
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TechPrimary,
-                    titleContentColor = Color.White
-                ),
                 title = {
-                    Text(
-                        text = if (userRole == "DUEÑO") "Panel Administrativo" else "PréstamoLab CTMA",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black
-                    )
+                    Column {
+                        Text(
+                            text = "Gestión de Equipos",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = if (uiState.isAdmin) "Modo Administrador" else "Modo Prestatario",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TechSecondary
+                        )
+                    }
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        editName = userName
-                        showProfileDialog = true 
-                    }) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = "Perfil", tint = Color.White, modifier = Modifier.size(32.dp))
+                    IconButton(onClick = { showEditProfileDialog = true }) {
+                        Icon(Icons.Default.Person, contentDescription = "Perfil")
                     }
-                }
+                    IconButton(onClick = {
+                        viewModel.logout()
+                        onNavigateToLogin()
+                    }) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar Sesión")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
         floatingActionButton = {
-            if (userRole == "DUEÑO" && selectedTab == 0) {
+            if (uiState.isAdmin && selectedTab == 0) {
                 FloatingActionButton(
                     onClick = { showAddEquipmentDialog = true },
-                    containerColor = TechSecondary,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp)
+                    containerColor = TechPrimary,
+                    contentColor = Color.White
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar Dispositivo")
+                    Icon(Icons.Default.Add, contentDescription = "Agregar Equipo")
                 }
             }
         }
@@ -102,509 +105,393 @@ fun CatalogScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(TechBackground)
                 .padding(paddingValues)
         ) {
-            TabRow(
-                selectedTabIndex = selectedTab, 
-                containerColor = TechSurface,
-                contentColor = TechPrimary,
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = TechSecondary
-                    )
-                }
-            ) {
+            // Pestañas (Tabs): Inventario vs Préstamos
+            TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Inventario", fontWeight = FontWeight.Bold) }
+                    text = { Text("Inventario") },
+                    icon = { Icon(Icons.Default.List, contentDescription = null) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { 
-                        val count = if(userRole == "DUEÑO") allLoansAdmin.count { it.estado == EstadoSolicitud.SOLICITADA || it.estado == EstadoSolicitud.APROBADA } else myLoans.size
-                        val label = if(userRole == "DUEÑO") "Préstamos ($count)" else "Mis Préstamos ($count)"
-                        Text(text = label, fontWeight = FontWeight.Bold) 
-                    }
+                    text = { Text("Préstamos") },
+                    icon = { Icon(Icons.Default.DateRange, contentDescription = null) }
                 )
             }
 
-            if (selectedTab == 1) {
-                val equiposList = (uiState as? CatalogUiState.Success)?.equipos ?: emptyList()
-                if (userRole == "DUEÑO") {
+            if (selectedTab == 0) {
+                // Buscador
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Buscar equipo...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // Filtros por Categoría
+                val categories = listOf("Todos", "Cámaras", "Laptops", "Aulicos", "Audio", "Otros")
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    items(categories) { category ->
+                        FilterChip(
+                            selected = selectedCategory == category,
+                            onClick = { selectedCategory = category },
+                            label = { Text(category) }
+                        )
+                    }
+                }
+
+                // Lista de Equipos
+                val filteredEquipos = uiState.equipos.filter { equipo ->
+                    (selectedCategory == "Todos" || equipo.categoria.equalsIgnoreCase(selectedCategory)) &&
+                            (equipo.nombre.contains(searchQuery, ignoreCase = true) || equipo.descripcion.contains(searchQuery, ignoreCase = true))
+                }
+
+                if (filteredEquipos.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No se encontraron equipos disponibles.", color = TextGray)
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(filteredEquipos) { equipo ->
+                            EquipoItemCard(
+                                equipo = equipo,
+                                isAdmin = uiState.isAdmin,
+                                onRequest = { equipmentToRequest = equipo },
+                                onEdit = { equipmentToEdit = equipo },
+                                onDelete = { equipmentToDelete = equipo }
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Sección de Préstamos
+                if (uiState.isAdmin) {
                     AdminLoansList(
-                        loans = allLoansAdmin,
-                        equipos = equiposList,
+                        loans = uiState.prestamos,
+                        equipos = uiState.equipos,
                         viewModel = viewModel,
-                        onApprove = { viewModel.changeLoanStatus(it, "APROBADA") },
-                        onReject = { viewModel.changeLoanStatus(it, "RECHAZADA") },
-                        onFinalize = { viewModel.finalizeLoan(it) }
+                        onApprove = { viewModel.aprobarPrestamo(it) },
+                        onReject = { viewModel.rechazarPrestamo(it) },
+                        onFinalize = { viewModel.finalizarPrestamo(it) }
                     )
                 } else {
                     PrestatarioLoansList(
-                        loans = myLoans,
-                        equipos = equiposList,
+                        loans = uiState.prestamos.filter { it.usuarioId == uiState.currentUserId },
+                        equipos = uiState.equipos,
                         viewModel = viewModel,
-                        onFinalize = { viewModel.finalizeLoan(it) }
+                        onFinalize = { viewModel.finalizarPrestamo(it) }
                     )
-                }
-            } else {
-                Column {
-                    OutlinedTextField(
-                        value = queryBusqueda,
-                        onValueChange = { viewModel.onQueryChanged(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        placeholder = { Text("Buscar dispositivo...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TechPrimary) },
-                        shape = RoundedCornerShape(14.dp),
-                        singleLine = true
-                    )
-
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = categoriaSeleccionada == null,
-                                onClick = { viewModel.onCategorySelected(null) },
-                                label = { Text("Todas") }
-                            )
-                        }
-                        items(CategoriaEquipo.entries) { cat ->
-                            FilterChip(
-                                selected = categoriaSeleccionada == cat,
-                                onClick = { viewModel.onCategorySelected(cat) },
-                                label = { Text(cat.name) }
-                            )
-                        }
-                    }
-
-                    when (uiState) {
-                        is CatalogUiState.Loading -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = TechPrimary)
-                            }
-                        }
-                        is CatalogUiState.Empty -> {
-                            Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(Icons.Default.Inventory, contentDescription = null, tint = TechSecondary, modifier = Modifier.size(56.dp))
-                                    Text("No hay equipos registrados en el inventario.", fontWeight = FontWeight.Bold, color = TextDark, textAlign = TextAlign.Center)
-                                }
-                            }
-                        }
-                        is CatalogUiState.Error -> {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Error de conexión", color = Color.Red)
-                            }
-                        }
-                        is CatalogUiState.Success -> {
-                            val equiposList = (uiState as CatalogUiState.Success).equipos
-                            if (equiposList.isEmpty()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.SearchOff,
-                                            contentDescription = null,
-                                            tint = TechSecondary,
-                                            modifier = Modifier.size(56.dp)
-                                        )
-                                        Text(
-                                            text = when {
-                                                categoriaSeleccionada != null -> "No hay dispositivos registrados en la categoría '${categoriaSeleccionada?.name}'"
-                                                queryBusqueda.isNotBlank() -> "No se encontraron resultados para '$queryBusqueda'"
-                                                else -> "No se encontraron dispositivos"
-                                            },
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center,
-                                            color = TextDark
-                                        )
-                                        Text(
-                                            text = "Intenta buscar con otros términos o selecciona otra categoría.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.Gray,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        OutlinedButton(
-                                            onClick = {
-                                                viewModel.onCategorySelected(null)
-                                                viewModel.onQueryChanged("")
-                                            },
-                                            shape = RoundedCornerShape(12.dp)
-                                        ) {
-                                            Icon(Icons.Default.FilterAltOff, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Limpiar filtros")
-                                        }
-                                    }
-                                }
-                            } else {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    items(equiposList, key = { it.id }) { equipo ->
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(16.dp),
-                                            colors = CardDefaults.cardColors(containerColor = TechSurface),
-                                            elevation = CardDefaults.cardElevation(2.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .then(
-                                                        if (userRole != "DUEÑO") {
-                                                            Modifier.clickable { onEquipmentClick(equipo.id) }
-                                                        } else Modifier
-                                                    )
-                                                    .padding(16.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Surface(
-                                                    modifier = Modifier.size(44.dp),
-                                                    shape = RoundedCornerShape(10.dp),
-                                                    color = TechPrimary.copy(alpha = 0.1f)
-                                                ) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        Icon(Icons.Default.Inventory2, contentDescription = null, tint = TechPrimary)
-                                                    }
-                                                }
-
-                                                Spacer(modifier = Modifier.width(16.dp))
-
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(equipo.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextDark)
-                                                    Text(equipo.categoria.name, style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontWeight = FontWeight.Medium)
-                                                }
-
-                                                if (userRole == "DUEÑO") {
-                                                    IconButton(onClick = {
-                                                        selectedEquipmentToEdit = equipo
-                                                        showEditEquipmentDialog = true
-                                                    }) {
-                                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TechSecondary)
-                                                    }
-                                                    IconButton(onClick = {
-                                                        equipmentToDelete = equipo
-                                                        showDeleteConfirmDialog = true
-                                                    }) {
-                                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = StatusRedVibrant)
-                                                    }
-                                                } else {
-                                                    Surface(
-                                                        color = if (equipo.estado == EstadoEquipo.DISPONIBLE) StatusGreenVibrant.copy(alpha = 0.1f) else Color.Gray.copy(alpha = 0.1f),
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = equipo.estado.name,
-                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = if (equipo.estado == EstadoEquipo.DISPONIBLE) StatusGreenVibrant else Color.Gray
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
     }
 
-    // MODAL DE PERFIL
-    if (showProfileDialog) {
-        AlertDialog(
-            onDismissRequest = { showProfileDialog = false },
-            confirmButton = {},
-            containerColor = TechSurface,
-            shape = RoundedCornerShape(28.dp),
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ManageAccounts, contentDescription = null, tint = TechPrimary, modifier = Modifier.size(28.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text("Cuenta", fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleLarge)
-                }
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(contentAlignment = Alignment.BottomEnd, modifier = Modifier.padding(vertical = 8.dp)) {
-                        Surface(
-                            modifier = Modifier.size(90.dp).border(2.dp, TechPrimary, CircleShape),
-                            shape = CircleShape,
-                            color = TechPrimary.copy(alpha = 0.15f)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = TechPrimary, modifier = Modifier.size(48.dp))
-                            }
-                        }
-                    }
-
-                    Surface(
-                        color = TechSecondary.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "ROL: $userRole",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            fontWeight = FontWeight.Black,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TechSecondary
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = editName,
-                        onValueChange = { editName = it },
-                        label = { Text("Nombre Completo") },
-                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null, tint = TechPrimary) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    Button(
-                        onClick = {
-                            viewModel.updateProfile(editName, null)
-                            showProfileDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TechPrimary)
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Guardar Perfil", fontWeight = FontWeight.Bold)
-                    }
-
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
-
-                    Button(
-                        onClick = {
-                            showProfileDialog = false
-                            onLogout() 
-                        },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusRedVibrant)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cerrar Sesión", fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                }
-            }
-        )
-    }
-
-    // DIÁLOGOS DE AGREGAR/EDITAR
+    // ==========================================
+    // MODALES Y DIÁLOGOS
+    // ==========================================
     if (showAddEquipmentDialog) {
-        var newName by remember { mutableStateOf("") }
-        var newDesc by remember { mutableStateOf("") }
-        var selectedCat by remember { mutableStateOf(CategoriaEquipo.ELECTRONICA) }
-
-        AlertDialog(
-            onDismissRequest = { showAddEquipmentDialog = false },
-            title = { Text("Nuevo Dispositivo", fontWeight = FontWeight.Bold) },
-            containerColor = TechSurface,
-            shape = RoundedCornerShape(24.dp),
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        label = { Text("Nombre") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value = newDesc,
-                        onValueChange = { newDesc = it },
-                        label = { Text("Descripción") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Text("Categoría:", fontWeight = FontWeight.Bold)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CategoriaEquipo.entries.forEach { cat ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedCat = cat }
-                                    .border(1.dp, if (selectedCat == cat) TechPrimary else Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (selectedCat == cat) TechPrimary.copy(alpha = 0.1f) else Color.Transparent
-                            ) {
-                                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(selected = selectedCat == cat, onClick = { selectedCat = cat })
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(cat.name, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newName.isNotBlank()) {
-                            viewModel.addNewEquipment(newName, selectedCat, newDesc)
-                            showAddEquipmentDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = TechPrimary)
-                ) {
-                    Text("Agregar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddEquipmentDialog = false }) { Text("Cancelar") }
+        AddOrEditEquipmentDialog(
+            equipo = null,
+            onDismiss = { showAddEquipmentDialog = false },
+            onConfirm = { nombre, desc, cat, estado ->
+                viewModel.agregarEquipo(nombre, desc, cat, estado)
+                showAddEquipmentDialog = false
             }
         )
     }
 
-    if (showEditEquipmentDialog && selectedEquipmentToEdit != null) {
-        var editNameEq by remember { mutableStateOf(selectedEquipmentToEdit!!.nombre) }
-        var editDescEq by remember { mutableStateOf(selectedEquipmentToEdit!!.descripcion) }
-        var editCatEq by remember { mutableStateOf(selectedEquipmentToEdit!!.categoria) }
-
-        AlertDialog(
-            onDismissRequest = { showEditEquipmentDialog = false },
-            title = { Text("Editar Dispositivo", fontWeight = FontWeight.Bold) },
-            containerColor = TechSurface,
-            shape = RoundedCornerShape(24.dp),
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = editNameEq,
-                        onValueChange = { editNameEq = it },
-                        label = { Text("Nombre") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value = editDescEq,
-                        onValueChange = { editDescEq = it },
-                        label = { Text("Descripción") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Text("Categoría:", fontWeight = FontWeight.Bold)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CategoriaEquipo.entries.forEach { cat ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { editCatEq = cat }
-                                    .border(1.dp, if (editCatEq == cat) TechPrimary else Color.LightGray.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (editCatEq == cat) TechPrimary.copy(alpha = 0.1f) else Color.Transparent
-                            ) {
-                                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(selected = editCatEq == cat, onClick = { editCatEq = cat })
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(cat.name, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (editNameEq.isNotBlank()) {
-                            viewModel.updateEquipmentAdmin(
-                                id = selectedEquipmentToEdit!!.id,
-                                nombre = editNameEq,
-                                categoria = editCatEq,
-                                descripcion = editDescEq,
-                                estado = selectedEquipmentToEdit!!.estado
-                            )
-                            showEditEquipmentDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = TechPrimary)
-                ) {
-                    Text("Guardar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditEquipmentDialog = false }) { Text("Cancelar") }
+    equipmentToEdit?.let { equipo ->
+        AddOrEditEquipmentDialog(
+            equipo = equipo,
+            onDismiss = { equipmentToEdit = null },
+            onConfirm = { nombre, desc, cat, estado ->
+                viewModel.actualizarEquipo(equipo.id, nombre, desc, cat, estado)
+                equipmentToEdit = null
             }
         )
     }
 
-    if (showDeleteConfirmDialog && equipmentToDelete != null) {
+    equipmentToDelete?.let { equipo ->
         AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRedVibrant)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Eliminar Dispositivo", fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Text(
-                    text = "¿Estás seguro de que deseas eliminar '${equipmentToDelete!!.nombre}'? Esta acción no se puede deshacer.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            containerColor = TechSurface,
-            shape = RoundedCornerShape(24.dp),
+            onDismissRequest = { equipmentToDelete = null },
+            title = { Text("Eliminar Equipo") },
+            text = { Text("¿Estás seguro de que deseas eliminar '${equipo.nombre}' del inventario?") },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
-                        viewModel.removeEquipment(equipmentToDelete!!.id)
-                        showDeleteConfirmDialog = false
+                        viewModel.eliminarEquipo(equipo.id)
                         equipmentToDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusRedVibrant)
-                ) {
-                    Text("Eliminar", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                    }
+                ) { Text("Eliminar", color = StatusRedVibrant) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { equipmentToDelete = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    equipmentToRequest?.let { equipo ->
+        RequestLoanDialog(
+            equipo = equipo,
+            onDismiss = { equipmentToRequest = null },
+            onConfirm = { destino, proposito, horas ->
+                viewModel.solicitarPrestamo(equipo.id, destino, proposito, horas)
+                equipmentToRequest = null
+            }
+        )
+    }
+
+    if (showEditProfileDialog) {
+        EditProfileDialog(
+            currentName = uiState.userName,
+            onDismiss = { showEditProfileDialog = false },
+            onSave = { newName ->
+                viewModel.actualizarPerfil(newName)
+                showEditProfileDialog = false
             }
         )
     }
 }
+
+// ==========================================
+// COMPONENTES SECUNDARIOS DE UI
+// ==========================================
+
+@Composable
+fun EquipoItemCard(
+    equipo: Equipo,
+    isAdmin: Boolean,
+    onRequest: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = TechSurface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = equipo.nombre,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextDark
+                )
+                Text(
+                    text = equipo.categoria,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TechPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = equipo.descripcion,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextGray
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Surface(
+                    color = if (equipo.disponible) StatusGreenVibrant.copy(alpha = 0.1f) else StatusRedVibrant.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = if (equipo.disponible) "Disponible" else "Ocupado",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (equipo.disponible) StatusGreenVibrant else StatusRedVibrant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (isAdmin) {
+                    Row {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TechPrimary)
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = StatusRedVibrant)
+                        }
+                    }
+                } else if (equipo.disponible) {
+                    Button(
+                        onClick = onRequest,
+                        colors = ButtonDefaults.buttonColors(containerColor = TechPrimary),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("Solicitar", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RequestLoanDialog(
+    equipo: Equipo,
+    onDismiss: () -> Unit,
+    onConfirm: (destino: String, proposito: String, horas: Int) -> Unit
+) {
+    var destino by remember { mutableStateOf("") }
+    var proposito by remember { mutableStateOf("") }
+    var horasText by remember { mutableStateOf("1") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Solicitar Préstamo: ${equipo.nombre}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = destino,
+                    onValueChange = { destino = it },
+                    label = { Text("Ambiente de Destino (ej. Aula 102)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = proposito,
+                    onValueChange = { proposito = it },
+                    label = { Text("Propósito del Préstamo") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = horasText,
+                    onValueChange = { horasText = it },
+                    label = { Text("Duración estimada (Horas)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val horas = horasText.toIntOrNull() ?: 1
+                    if (destino.isNotBlank()) {
+                        onConfirm(destino, proposito, horas)
+                    }
+                }
+            ) { Text("Enviar Solicitud") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+fun AddOrEditEquipmentDialog(
+    equipo: Equipo?,
+    onDismiss: () -> Unit,
+    onConfirm: (nombre: String, descripcion: String, categoria: String, disponible: Boolean) -> Unit
+) {
+    var nombre by remember { mutableStateOf(equipo?.nombre ?: "") }
+    var descripcion by remember { mutableStateOf(equipo?.descripcion ?: "") }
+    var categoria by remember { mutableStateOf(equipo?.categoria ?: "Cámaras") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (equipo == null) "Agregar Nuevo Equipo" else "Editar Equipo") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre del Equipo") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = categoria,
+                    onValueChange = { categoria = it },
+                    label = { Text("Categoría") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (nombre.isNotBlank()) {
+                        onConfirm(nombre, descripcion, categoria, equipo?.disponible ?: true)
+                    }
+                }
+            ) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+fun EditProfileDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var name by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar Perfil") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nombre de Usuario") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(onClick = { if (name.isNotBlank()) onSave(name) }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+// Extension helper para comparar cadenas
+fun String.equalsIgnoreCase(other: String): Boolean {
+    return this.equals(other, ignoreCase = true)
+}
+
+// ==========================================
+// VISTAS Y LISTAS DE PRÉSTAMOS
+// ==========================================
 
 @Composable
 fun PrestatarioLoansList(
@@ -660,14 +547,14 @@ fun PrestatarioLoansList(
                                 )
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Destino: ${loan.ambienteDestino}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         if (loan.proposito.isNotBlank()) {
                             Text("Propósito: ${loan.proposito}", style = MaterialTheme.typography.bodySmall, color = TextGray)
                         }
                         Text("Duración: ${loan.duracionHoras}h", style = MaterialTheme.typography.bodySmall, color = TextGray)
-                        
+
                         if (loan.estado == EstadoSolicitud.APROBADA) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -759,14 +646,14 @@ fun AdminLoansList(
                                 )
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Destino: ${loan.ambienteDestino}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         if (loan.proposito.isNotBlank()) {
                             Text("Propósito: ${loan.proposito}", style = MaterialTheme.typography.bodySmall, color = TextGray)
                         }
                         Text("Duración: ${loan.duracionHoras}h", style = MaterialTheme.typography.bodySmall, color = TextGray)
-                        
+
                         if (loan.estado == EstadoSolicitud.APROBADA) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
